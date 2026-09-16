@@ -1,0 +1,104 @@
+#Description
+
+llm_guidance: 
+  overall_guidance: Create an in-depth hardware description on how embedding_lookup
+  is handled in the python functional model. 
+  Keep the descriptions brief, but comprehensive.
+  Use references to point to information.
+  what_information_to_include:
+  - Description what the unit does.
+  - What python function is being implemented in SystemVerilog.
+  - 
+  what_to_create:
+  - {name}.sv
+  - tb_{name}.sv
+  - if_necessary: a header file 
+
+name: embedding_lookup_unit
+description: >
+  Implements the PyTorch nn.Embedding layer (torch.nn.Embedding) as a table lookup unit.
+  Maps token IDs to dense hidden-state vectors by indexing into a (100352, 768) weight matrix
+  (77M params, shared/tied with lm_head). Each B×S int64 token ID selects one (768,) bfloat16
+  row. The retrieved embedding is scaled by embedding_multiplier = 12 before output.
+  Input: token IDs (B×S, int64). Output: hidden states (B×S×768, bfloat16).
+  See LLM_LAYER_DESCRIPTION.md §1 and inference_trace.json step 2.
+  Python path (GraniteMoeHybridModel.forward):
+    inputs_embeds = self.embed_tokens(input_ids) * self.embedding_multiplier
+
+interface:
+  ports:
+    - name: clk
+      direction: input
+      width: 1
+      description: Clock signal
+    - name: rst_n
+      direction: input
+      width: 1
+      description: Active-low synchronous reset
+    - name: load_en
+      direction: input
+      width: 1
+      description: Table write enable (load one element per cycle)
+    - name: load_token
+      direction: input
+      width: 17
+      description: Table row (token ID) for the write ($clog2(VOCAB))
+    - name: load_idx
+      direction: input
+      width: 10
+      description: Element index within the row ($clog2(DIM))
+    - name: load_wdata
+      direction: input
+      width: 16
+      description: bfloat16 table element to write
+    - name: valid_in
+      direction: input
+      width: 1
+      description: Token ID valid strobe (accepted when busy = 0)
+    - name: token_id
+      direction: input
+      width: 17
+      description: Token ID to look up
+    - name: data_out
+      direction: output
+      width: 16
+      description: bfloat16 scaled embedding element (row * 12.0)
+    - name: valid_out
+      direction: output
+      width: 1
+      description: Output element valid strobe (one per cycle while streaming)
+    - name: busy
+      direction: output
+      width: 1
+      description: Unit is streaming a row (cannot accept a new token)
+
+max_clock_speed: 300 MHz (estimated; critical path is the shared fp_unit MUL plus the
+  table read mux — same fp_unit bound as conv1d_unit/RMSNorm_unit)
+
+characteristics:
+  latency: >
+    DIM + ~3 cycles per token (IDLE accept, then one element per cycle through the
+    fp_unit MUL pipeline). For DIM=768: ~771 cycles.
+  throughput: 1 output element per cycle while streaming (768 elements per token)
+  resource_usage: >
+    Parameterized (VOCAB x DIM) x 16-bit table memory (100352 x 768 x 16 bit = 154 MB
+    at full size; inference maps to external memory in practice),
+    1 fp_unit instance (bfloat16 MUL), small FSM/counters.
+  notes: >
+    Token IDs are latched on accept and the row is streamed in order. The scaling
+    factor 12.0 is exactly representable in bfloat16 (0x4140), so the fp_unit MUL
+    result matches PyTorch's bfloat16 scalar multiply bit-exactly.
+    Table writes are not gated against lookups; weights must be loaded before the
+    first valid_in (load interface is intended for pre-loading/baking weights).
+  unit_verification: >
+    tb_embedding_lookup_unit.py: random table rows loaded through the load port,
+    16 token IDs, 12288/12288 outputs bit-exact vs row*12.0 golden sample.
+  in_loop_verification: >
+    tb_embedding_lookup_unit_inloop.py: runs 3 real Granite prompts, captures the
+    actual scaled embedding feeding layer 0's input_layernorm, loads the model's
+    embed_tokens rows and compares 16896/16896 outputs bit-exact (max abs error 0.0).
+  formal_verification: >
+    formal/bmc.sby (SymbiYosys BMC, depth 32, fp_unit abstracted via an anyseq stub)
+    proves: output only while busy, at most DIM outputs per token, busy rises only
+    after an accepted input, and busy falls only after exactly DIM outputs.
+    Run: sby -f bmc.sby.

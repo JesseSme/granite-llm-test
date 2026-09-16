@@ -1,0 +1,26 @@
+# BMC of embedding_lookup_unit stream-protocol invariants (fp_unit abstracted).
+# Run: sby -f bmc.sby
+
+[tasks]
+bmc
+
+[options]
+mode bmc
+depth 32
+expect pass
+
+[engines]
+smtbmc
+
+[script]
+read_verilog -sv fp_pkg.sv
+read_verilog -sv fp_unit_stub.sv
+read_verilog -sv embedding_lookup_unit.sv
+read_verilog -formal -sv embedding_lookup_props.sv
+prep -top embedding_lookup_props
+
+[files]
+../../../systemverilog_fp_unit/rtl/fp_pkg.sv
+fp_unit_stub.sv
+../embedding_lookup_unit.sv
+embedding_lookup_props.sv
