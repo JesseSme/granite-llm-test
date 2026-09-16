@@ -1,0 +1,33 @@
+# BMC of ssm_unit AXI-Stream framing invariants (FP datapaths abstracted).
+# Small instance: NUM_HEADS=2, HEAD_DIM=1, D_STATE=1 -> XN=2, frame=6 beats;
+# one full activation takes ~80 cycles.
+# Run: sby -f bmc.sby
+
+[tasks]
+bmc
+
+[options]
+mode bmc
+depth 140
+timeout 300
+expect pass
+
+[engines]
+smtbmc
+
+[script]
+read_verilog -sv fp_pkg.sv
+read_verilog -sv fp_unit_stub.sv
+read_verilog -sv seq_stubs.sv
+read_verilog -sv fp32_to_bf16_round.sv
+read_verilog -sv ssm_unit.sv
+read_verilog -formal -sv ssm_props.sv
+prep -top ssm_props
+
+[files]
+../../../systemverilog_fp_unit/rtl/fp_pkg.sv
+fp_unit_stub.sv
+seq_stubs.sv
+../../../systemverilog_fp_unit/rtl/fp32_to_bf16_round.sv
+../ssm_unit.sv
+ssm_props.sv

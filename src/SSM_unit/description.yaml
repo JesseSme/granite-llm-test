@@ -1,0 +1,167 @@
+#Description
+
+llm_guidance: 
+  overall_guidance: Create an in-depth hardware description on how the SSM layer works inside
+  the python functional model. 
+  Keep the descriptions brief, but comprehensive.
+  Use references to point to information.
+  what_information_to_include:
+  - Description what the unit does.
+  - What python function is being implemented in SystemVerilog.
+  - 
+  what_to_create:
+  - {name}.sv
+  - tb_{name}.sv
+  - if_necessary: a header file 
+
+
+
+name: ssm_unit
+description: >
+  Selective State Space Model (S6) recurrence unit — the Mamba2 scan core of
+  Granite 4.0-H-350M's GraniteMoeHybridMambaLayer
+  (transformers: mamba2_chunk_scan fallback path). One token (sequence
+  position) is processed per AXI-Stream transaction; the recurrent state
+  persists across transactions (resetting it starts a new sequence):
+
+    z_h   = bf16(dt_h + dt_bias_h)
+    dtp_h = bf16(softplus(z_h))                     time-step discretization
+    A_h   = -exp(A_log_h)                           per-head decay rate
+    dA_h  = exp(A_h * dtp_h)
+    h     = dA_h * h + (dtp_h * B_s) * x_hd         fp32 state update
+    y_hd  = D_h * x_hd + sum_s h[s] * C_s           fp32 output (per head/dim)
+
+  Dimensions (layer 0): num_heads=48, head_dim=32, d_state=128, n_groups=1
+  (B and C are shared by all heads; dt is per head). x/B/C/dt are bfloat16
+  values; the state, all arithmetic, and the output are binary32. The model
+  runs the mathematically equivalent chunked scan (chunk_size 256) with a
+  different summation order, so the in-loop check is tolerance-based rather
+  than bit-exact. exp and softplus are sequential polynomial units (degree-6
+  poly after x/32 range scaling + 5 squarings; softplus = max(z,0) +
+  2*atanh series), each ~1e-5 relative error.
+  Reference: LLM_LAYER_DESCRIPTION.md §2b Step 5.
+
+interface:
+  - name: clk
+    direction: input
+    width: 1
+    description: Clock
+  - name: rst_n
+    direction: input
+    width: 1
+    description: Synchronous active-low reset; starts the sequential state clear
+  - name: load_en
+    direction: input
+    width: 1
+    description: Weight load enable (A_log/D/dt_bias, one head per write)
+  - name: load_sel
+    direction: input
+    width: 2
+    description: Weight select (0=A_log, 1=D, 2=dt_bias)
+  - name: load_idx
+    direction: input
+    width: 6
+    description: Head index for the weight load (clog2(NUM_HEADS))
+  - name: load_wdata
+    direction: input
+    width: 16
+    description: bfloat16 weight value
+  - name: s_axis_tvalid
+    direction: input
+    width: 1
+    description: AXI-Stream input valid (one token frame per transaction)
+  - name: s_axis_tready
+    direction: output
+    width: 1
+    description: >
+      AXI-Stream input ready (high only while idle and after the state clear
+      has finished)
+  - name: s_axis_tdata
+    direction: input
+    width: 16
+    description: >
+      bfloat16 input beat; frame order: x (NUM_HEADS*HEAD_DIM), B (D_STATE),
+      C (D_STATE), dt (NUM_HEADS)
+  - name: s_axis_tlast
+    direction: input
+    width: 1
+    description: Input last beat (final dt element)
+  - name: m_axis_tvalid
+    direction: output
+    width: 1
+    description: AXI-Stream output valid (y frame, NUM_HEADS*HEAD_DIM beats)
+  - name: m_axis_tready
+    direction: input
+    width: 1
+    description: AXI-Stream output ready (downstream backpressure)
+  - name: m_axis_tdata
+    direction: output
+    width: 32
+    description: fp32 output element
+  - name: m_axis_tlast
+    direction: output
+    width: 1
+    description: Output last beat (final y element)
+  - name: busy
+    direction: output
+    width: 1
+    description: >
+      Unit is clearing state or processing/streaming a token (input beats not
+      accepted)
+
+max_clock_speed: 150 MHz (estimated; binary32 fp_unit MUL/ADD critical path as
+  in matrix_unit/residual_adder_unit plus the 196k-word state read/write
+  addressing, which a real implementation maps to SRAM; no STA cell library
+  available)
+
+characteristics:
+  latency: >
+    After reset: a sequential state clear of NUM_HEADS*HEAD_DIM*D_STATE cycles
+    (196,608 at 48/32/128, ~1.3 ms at 150 MHz). Per token: input frame beats
+    (1840) + per-head preparation (~90 cycles x 48) + D_STATE-cycle
+    w = dtp*B loop (256) + the (head, dim) update/output loops
+    (48 x 32 x (3 + 6 x 128) = ~1.18M cycles) -> ~1.19M cycles per token
+    (~7.9 ms at 150 MHz); the state is carried to the next token.
+  throughput: >
+    One state element update per 6 cycles (dA*h, w*x, add, newh*C, accumulate,
+    loop); one 32-bit output beat per 771 cycles at D_STATE=128. Sequential
+    over the sequence dimension by construction (recurrence).
+  resource_usage: >
+    State RAM: 196,608 x 32-bit (NUM_HEADS x HEAD_DIM x D_STATE). Buffers:
+    x 1536 x 16, B/C 128 x 16 each, dt 48 x 16, weights 3 x 48 x 16, w 128 x 32,
+    dA 48 x 32. Nine binary32 fp_unit instances (top MUL + ADD; softplus MUL +
+    ADD + DIV and its exp MUL + ADD; top-level exp MUL + ADD), plus two
+    fp32_to_bf16_round stages.
+  notes: >
+    AXI-Stream contract: the input frame is x|B|C|dt with tlast on the final
+    beat (the counter bound also ends frames that omit tlast); the output
+    frame is NUM_HEADS*HEAD_DIM fp32 beats with tlast on the final beat and is
+    held stable under downstream backpressure. The state is cleared
+    sequentially after reset (one word per cycle) because a single-cycle clear
+    of ~6.3 Mbit is not implementable; s_axis_tready stays low until the clear
+    finishes. exp is clamped to |x| <= 16 (exp(-16) ~ 1.1e-7) to keep the
+    range-scaling polynomial bounded. All constants are localparams.
+  unit_verification: >
+    tb_ssm_unit.py: 2 heads / 2 head_dim / 4 d_state synthetic instance, 4
+    tokens with state carried between frames, golden from gen_golden.py (fp32
+    recurrence with torch exp/softplus): 16/16 outputs within 5% / 0.05 abs,
+    max abs error 1e-6, max rel error 1e-6. tb_controlled.py: directed
+    A_log=0 (A=-1), D=1, dt_bias=0, dt=0.5, x=B=C=1 case, 3 tokens, checked
+    against torch to 1e-3. Run: `.venv/bin/python run_test.py` (and
+    `run_test.py controlled`).
+  in_loop_verification: >
+    tb_ssm_unit_inloop.py: real layer-0 (48/32/128) x/B/C/dt from a Granite
+    4.0-H-350M forward pass (9-token prompt), captured by patching
+    mamba2_chunk_scan. DUT y vs the model's chunk_scan output: 0/13824
+    elements outside 1e-3/1e-3 (max abs 4.47e-8, max rel 5.14e-6); vs the fp32
+    recurrence from the same inputs: max abs 2.79e-8, max rel 5.51e-6.
+    Run: `.venv/bin/python run_test.py inloop` (~18 min, 1.2M cycles/token).
+  formal_verification: >
+    formal/bmc.sby: BMC depth 140 on a 2/1/1 instance with the FP datapaths
+    abstracted by anyseq stubs (fp_unit, fp_exp_seq, fp_softplus_seq; done
+    response bounded to <= 4 cycles). Properties: tready == !busy; tvalid only
+    while busy; tlast exactly on the NUM_HEADS*HEAD_DIM-th output beat; at most
+    XN output beats per activation; a busy period ends only by accepting a
+    tlast output beat; offered beats stay valid/stable under backpressure; no
+    output beats before the first complete input frame. PASSES.
+    Run: `sby -f bmc.sby` (cap memory with `ulimit -v` if needed).
