@@ -1,0 +1,100 @@
+#Description
+
+llm_guidance: 
+  overall_guidance: Create an in-depth hardware description on how the residual_adder
+  is handled in the python functional model. 
+  Keep the descriptions brief, but comprehensive.
+  Use references to point to information.
+  what_information_to_include:
+  - Description what the unit does.
+  - What python function is being implemented in SystemVerilog.
+  - 
+  what_to_create:
+  - {name}.sv
+  - tb_{name}.sv
+  - if_necessary: a header file 
+
+name: residual_adder_unit
+description: |
+  Scaled residual adder for the Granite 4.0-H-350M decoder layers.
+  Implements the residual connection (GraniteMoeHybridDecoderLayer.forward,
+  modeling_granitemoehybrid.py):
+    hidden_states = residual + hidden_states * residual_multiplier
+  where `residual` is the layer input stream, `hidden_states` is the mixer
+  (Mamba/Attention) or MLP (SwiGLU) output stream, and residual_multiplier is a
+  fixed constant (0.246), not a learned parameter. Element-wise over
+  (B x S x 768) bfloat16 tensors, streamed as element pairs:
+    data_out = residual_in + data_in * 0.246
+  Used twice per decoder layer: once after the mixer and once after the MLP.
+  In a 32-layer forward pass this unit is invoked 64 times.
+
+  Numerics: the Python model multiplies the bf16 tensor by the Python float
+  0.246 with the constant at full precision and rounds each arithmetic result
+  once to bf16. To reproduce that bit-exactly, the RTL widens the bf16 inputs
+  to binary32 (exact) and uses binary32 fp_units with the fp32 constant
+  0x3E7BE76D, rounding each operation result once back to bf16 via
+  fp32_to_bf16_round:
+    p   = bf16( data_in_fp32 * fp32(0.246) )
+    out = bf16( residual_in_fp32 + p_fp32 )
+  This datapath matches the model output bit-exactly (verified in-loop).
+
+interface:
+  ports:
+    - name: clk
+      direction: input
+      width: 1
+      description: Clock signal
+    - name: rst_n
+      direction: input
+      width: 1
+      description: Active-low synchronous reset
+    - name: valid_in
+      direction: input
+      width: 1
+      description: Element pair valid strobe (no backpressure)
+    - name: data_in
+      direction: input
+      width: 16
+      description: bfloat16 branch element (mixer/MLP output, scaled by 0.246)
+    - name: residual_in
+      direction: input
+      width: 16
+      description: bfloat16 residual element (added unscaled)
+    - name: data_out
+      direction: output
+      width: 16
+      description: bfloat16 result (3 cycles after valid_in)
+    - name: valid_out
+      direction: output
+      width: 1
+      description: Output valid strobe (valid_in delayed by 3 cycles)
+
+max_clock_speed: 200 MHz (estimated; binary32 fp_unit MUL/ADD logic depth 106 vs 74
+  for the bf16 fp_unit, scaled from the 300 MHz bf16 datapath bound — no STA cell
+  library available)
+
+characteristics:
+  latency: 3 cycles (fp32 MUL register, fp32 ADD register, output register)
+  throughput: 1 element per cycle (fully pipelined, no stalls)
+  resource_usage: >
+    2 binary32 fp_unit instances (OP_MUL by fp32(0.246), OP_ADD),
+    two fp32_to_bf16_round units (RNE on the products/sums), two pipeline registers.
+  notes: >
+    The multiply uses the binary32 constant 0.246 (0x3E7BE76D, delta from the
+    Python double ~6.8e-9) and each operation is rounded once to bfloat16,
+    reproducing torch's bf16 scalar-arithmetic semantics. Rounding is
+    roundTiesToEven with NaN/Inf passthrough and correct Inf on overflow.
+    fp32_to_bf16_round.sv is reusable by other units that accumulate in fp32.
+  unit_verification: >
+    tb_residual_adder_unit.py: 8 random model-semantics vector pairs (with an
+    idle gap to exercise the valid pipeline), 6144/6144 outputs bit-exact vs
+    torch `residual + branch * 0.246`.
+  in_loop_verification: >
+    tb_residual_adder_unit_inloop.py: real Granite forward passes, captures
+    both residual adds of layers 0 (Mamba) and 10 (Attention) for two prompts
+    (68 vector pairs). 52224/52224 outputs bit-exact vs the model tensors
+    (100.0%, max abs/rel error 0.0).
+  formal_verification: >
+    formal/bmc.sby (SymbiYosys BMC, depth 10, fp_units abstracted via anyseq
+    stubs) proves valid_out is exactly valid_in delayed by three clocks for
+    arbitrary inputs. Run: sby -f bmc.sby.

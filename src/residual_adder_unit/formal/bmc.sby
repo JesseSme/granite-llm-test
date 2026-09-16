@@ -1,0 +1,28 @@
+# BMC of residual_adder_unit pipeline invariants (fp_units abstracted).
+# Run: sby -f bmc.sby
+
+[tasks]
+bmc
+
+[options]
+mode bmc
+depth 10
+expect pass
+
+[engines]
+smtbmc
+
+[script]
+read_verilog -sv fp_pkg.sv
+read_verilog -sv fp_unit_stub.sv
+read_verilog -sv fp32_to_bf16_round.sv
+read_verilog -sv residual_adder_unit.sv
+read_verilog -formal -sv residual_adder_props.sv
+prep -top residual_adder_props
+
+[files]
+../../../systemverilog_fp_unit/rtl/fp_pkg.sv
+fp_unit_stub.sv
+../../../systemverilog_fp_unit/rtl/fp32_to_bf16_round.sv
+../residual_adder_unit.sv
+residual_adder_props.sv
