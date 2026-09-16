@@ -1,0 +1,22 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Local toolchain and model weights (large, not source)
+oss-cad-suite/
+granite-4.0-h-350m/
+
+# Simulation build artifacts
+sim_build*/
+results.xml
+
+# SymbiYosys work directories (sby leaves these next to the .sby files)
+**/formal/bmc/
+**/formal/bmc_*/

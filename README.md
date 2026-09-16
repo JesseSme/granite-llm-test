@@ -1,0 +1,1 @@
+This project is about implementing layers of an LLM in SystemVerilog by baking in the model weights to the system. The whole system should be done using registers only.
