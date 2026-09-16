@@ -1,0 +1,145 @@
+#Description
+
+llm_guidance: 
+  overall_guidance: Create an in-depth hardware description on how matrix calculations
+  are handled in the python functional model. 
+  Keep the descriptions brief, but comprehensive.
+  Use references to point to information.
+  what_information_to_include:
+  - Description what the unit does.
+  - What python function is being implemented in SystemVerilog.
+  - 
+  what_to_create:
+  - {name}.sv
+  - tb_{name}.sv
+  - if_necessary: a header file 
+
+name: matrix_unit
+description: >
+  Implements torch.nn.Linear — the linear projection y = xW^T + b used by every
+  Linear layer in the Granite 4.0-H-350M model (F.linear / `aten::linear`).
+  This is the most heavily used unit, invoked for all matrix multiplications
+  across the network. Parameterized (IN_FEATURES x OUT_FEATURES) bfloat16
+  weight matrix; all data bf16.
+
+  Weight dimensions seen in the inference trace:
+  - (3376, 768) — Mamba2 in_proj: 768->3376
+  - (768, 1536) — Mamba2 out_proj: 1536->768
+  - (4096, 768) — MLP gate+up projection: 768->4096
+  - (768, 2048) — MLP down projection: 2048->768
+  - (768, 768) — Attention Q and O projections: 768->768
+  - (256, 768) — Attention K and V projections: 768->256
+
+  Numerics: bf16 x and W are widened to binary32 exactly; the dot product is
+  accumulated sequentially in binary32 (bf16 x bf16 products are exact in
+  binary32), the bias is added last in binary32, and the final sum is rounded
+  once to bfloat16. This matches torch's bf16 F.linear; rare (<<0.1%) 1-ULP
+  differences can remain because ATen's blocked GEMM accumulation order is not
+  replicated.
+
+interface:
+  description: >
+    Weight/bias load port (one element per cycle) plus AXI-Stream input/output
+    for the activation vectors.
+  ports:
+    - name: clk
+      direction: input
+      width: 1
+      description: Clock signal
+    - name: rst_n
+      direction: input
+      width: 1
+      description: Active-low synchronous reset
+    - name: load_en
+      direction: input
+      width: 1
+      description: Weight/bias write enable
+    - name: load_out_idx
+      direction: input
+      width: clog2(OUT_FEATURES)
+      description: Output row index for weight/bias load
+    - name: load_in_idx
+      direction: input
+      width: clog2(IN_FEATURES)
+      description: Input column index for weight load
+    - name: load_wdata
+      direction: input
+      width: 16
+      description: bfloat16 weight or bias value
+    - name: load_is_bias
+      direction: input
+      width: 1
+      description: 0 = weight, 1 = bias
+    - name: s_axis_tvalid
+      direction: input
+      width: 1
+      description: AXI-Stream input valid (x vector, IN_FEATURES beats)
+    - name: s_axis_tready
+      direction: output
+      width: 1
+      description: AXI-Stream input ready (high only while idle)
+    - name: s_axis_tdata
+      direction: input
+      width: 16
+      description: bfloat16 input element
+    - name: s_axis_tlast
+      direction: input
+      width: 1
+      description: Input last beat (expected on the final x element)
+    - name: m_axis_tvalid
+      direction: output
+      width: 1
+      description: AXI-Stream output valid (y vector, OUT_FEATURES beats)
+    - name: m_axis_tready
+      direction: input
+      width: 1
+      description: AXI-Stream output ready (downstream backpressure)
+    - name: m_axis_tdata
+      direction: output
+      width: 16
+      description: bfloat16 output element
+    - name: m_axis_tlast
+      direction: output
+      width: 1
+      description: Output last beat (final y element)
+    - name: busy
+      direction: output
+      width: 1
+      description: Unit is computing/streaming (input not accepted)
+
+max_clock_speed: 200 MHz (estimated; binary32 fp_unit MUL/ADD path with the
+  accumulator feedback through the fp32 adder — same bound as residual_adder_unit;
+  no STA cell library available)
+
+characteristics:
+  latency: >
+    Per output row: OUT_FEATURES x (IN_FEATURES + 3) cycles plus input beats and
+    handshake stalls (IN_FEATURES MAC cycles, final product add, bias add, output).
+    For 768->768: ~592k cycles per vector.
+  throughput: 1 multiply-accumulate per cycle (accumulator held in the fp32 adder's
+    output register; no stalls between MACs)
+  resource_usage: >
+    Parameterized (OUT_FEATURES x IN_FEATURES) x 16-bit weight RAM,
+    OUT_FEATURES x 16-bit bias RAM, IN_FEATURES x 16-bit input buffer,
+    2 binary32 fp_unit instances (MUL + ADD) and one fp32_to_bf16_round unit.
+  notes: >
+    AXI-Stream contract: the input vector is IN_FEATURES beats with tlast on the
+    final beat (the counter bound also ends streams that omit tlast); the output
+    vector is OUT_FEATURES beats with tlast on the final beat and is held stable
+    under downstream backpressure. Weights must be loaded before streaming.
+    The output data is combinational from the fp32 accumulator through the
+    rounding stage, with registered tvalid.
+  unit_verification: >
+    tb_matrix_unit.py: 32x16 synthetic configuration, 8 vectors, random input
+    bubbles and randomized output stalls — 128/128 outputs bit-exact vs the
+    sequential-fp32 golden sample.
+  in_loop_verification: >
+    tb_matrix_unit_inloop.py: real Granite Linear layers. q_proj (768x768) of
+    layer 10: 6144/6144 outputs bit-exact (100%, max abs error 0.0); k_proj
+    (768x256) of layer 10: 2048/2048 bit-exact (100%, max abs error 0.0).
+    Run: `.venv/bin/python run_test.py inloop`.
+  formal_verification: >
+    formal/bmc.sby (SymBiYosys BMC, depth 40, fp_units abstracted via anyseq
+    stubs) proves: s_axis_tready == !busy, output valid only while busy, tlast
+    only on the final output beat, busy rises only after an accepted input beat,
+    and exactly OUT_FEATURES output beats per input vector. Run: sby -f bmc.sby.
