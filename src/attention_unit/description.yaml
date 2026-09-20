@@ -1,0 +1,176 @@
+#Description
+
+llm_guidance: 
+  overall_guidance: Create an in-depth hardware description on how an attention layer
+  is handled in the python functional model. 
+  Keep the descriptions brief, but comprehensive.
+  Use references to point to information.
+  what_information_to_include:
+  - Description what the unit does.
+  - What python function is being implemented in SystemVerilog.
+  - 
+  what_to_create:
+  - {name}.sv
+  - tb_{name}.sv
+  - if_necessary: a header file 
+
+
+
+name: attention_unit
+description: >
+  Grouped-query attention (GQA) unit for the GraniteMoeHybridAttention layers of
+  Granite 4.0-H-350M (decoder positions 10, 13, 17, 27); implements
+  GraniteMoeHybridAttention.forward() with the eager attention path.
+
+  Decoder-style incremental attention: one sequence position (token) per
+  AXI-Stream transaction, with the K/V cache held on chip. For each token:
+
+    1. Q/K/V projections  — Q: 768->768, K: 768->256, V: 768->256
+       (bf16 in/weights, sequential fp32 accumulation, single bf16 rounding;
+       no biases, matching config.attention_bias = False)
+    2. K/V appended to the on-chip cache at the current position
+    3. per query head h (12 heads, each sharing one of 4 KV heads, 3 query
+       heads per KV head — the repeat_interleave GQA expansion):
+         score_j = sum_d q_d * k_j[d]                  fp32, 64 MACs
+         score_j = bf16(bf16(score_j) * 0.015625)      torch rounds the bf16
+                                                       QK^T and the scalar
+                                                       multiply separately
+         p       = softmax_j(score)                    fp32; probabilities
+                                                       rounded to bf16 like
+                                                       torch's .to(dtype)
+         context_d = sum_j bf16(p_j) * v_j[d]          bf16 x bf16, fp32
+                                                       accumulation, one bf16
+                                                       rounding
+    4. O projection — context (768) -> attention output (768), bf16
+
+  Configuration: num_attention_heads = 12, num_key_value_heads = 4,
+  head_dim = 64, hidden = 768, attention_multiplier = 0.015625 (this is the
+  scaling; there is no separate 1/sqrt(head_dim) factor), NoPE (no rotary
+  embeddings), no dropout. Causality is implicit: a token only attends to
+  cached positions 0..pos, so no attention mask input is needed.
+  Reference: LLM_LAYER_DESCRIPTION.md §3b.
+
+interface:
+  - name: clk
+    direction: input
+    width: 1
+    description: Clock
+  - name: rst_n
+    direction: input
+    width: 1
+    description: >
+      Synchronous active-low reset; also clears the KV-cache position counter
+      (reset starts a new sequence; projection weights are retained)
+  - name: load_en
+    direction: input
+    width: 1
+    description: Weight load enable (one bf16 weight per cycle)
+  - name: load_sel
+    direction: input
+    width: 2
+    description: Weight select (0=Q, 1=K, 2=V, 3=O)
+  - name: load_out_idx
+    direction: input
+    width: 10
+    description: Output-feature index of the weight (clog2(HIDDEN))
+  - name: load_in_idx
+    direction: input
+    width: 10
+    description: Input-feature index of the weight (clog2(HIDDEN))
+  - name: load_wdata
+    direction: input
+    width: 16
+    description: bfloat16 weight value
+  - name: s_axis_tvalid
+    direction: input
+    width: 1
+    description: AXI-Stream input valid (one token frame per transaction)
+  - name: s_axis_tready
+    direction: output
+    width: 1
+    description: AXI-Stream input ready (high only while idle)
+  - name: s_axis_tdata
+    direction: input
+    width: 16
+    description: bfloat16 input beat (hidden state, HIDDEN beats)
+  - name: s_axis_tlast
+    direction: input
+    width: 1
+    description: Input last beat (final hidden-state element)
+  - name: m_axis_tvalid
+    direction: output
+    width: 1
+    description: AXI-Stream output valid (attention output, HIDDEN beats)
+  - name: m_axis_tready
+    direction: input
+    width: 1
+    description: AXI-Stream output ready (downstream backpressure)
+  - name: m_axis_tdata
+    direction: output
+    width: 16
+    description: bfloat16 output beat
+  - name: m_axis_tlast
+    direction: output
+    width: 1
+    description: Output last beat (final attention output element)
+  - name: busy
+    direction: output
+    width: 1
+    description: Unit is processing/streaming a token (input not accepted)
+
+max_clock_speed: 150 MHz (estimated; the critical path is the matrix_unit
+  binary32 MAC loop shared with matrix_unit (~200 MHz) plus the wide state
+  muxing/address generation of the attention sequencer; no STA cell library
+  available)
+
+characteristics:
+  latency: >
+    Weight load: HIDDEN*(HIDDEN + 2*KV_HEADS*HEAD_DIM + HIDDEN) cycles =
+    1,572,864 at 768/4/64 (one bf16 weight per cycle, ~10.5 ms at 150 MHz).
+    Per token: input frame (768) + broadcast feed to Q/K/V (768) + drains
+    (768 + 256 + 256) + per-head score/softmax/context (~1.4k x 12) +
+    context feed (768) + O drain (768) plus the Q/O projection MAC time
+    (2 x 768 x (768+3)) -> measured ~1.6M cycles per token (~10.6 ms at
+    150 MHz). The position counter increments once per frame.
+  throughput: >
+    One token per ~1.6M cycles; the Q and O projections dominate. K/V
+    projections run concurrently with the Q projection (the same input vector
+    is broadcast to all three).
+  resource_usage: >
+    KV cache: 2 x KV_HEADS x MAX_SEQ x HEAD_DIM bf16 (32,768 words = 64 KB at
+    4x64x64). Buffers: x/q/ctx 768 x 16-bit each. Four matrix_unit instances
+    (weights 2 x 768x768 + 2 x 256x768 = 1.57M x 16-bit = 3.1 MB), two
+    binary32 fp_unit instances (score MAC + scale) and attn_softmax_seq
+    (4 fp_unit + 1 fp_exp_seq + 1 fp32_to_bf16_round).
+  notes: >
+    AXI-Stream contract: a frame is HIDDEN bf16 beats with tlast on the final
+    beat; the output frame is HIDDEN bf16 beats with tlast on the final beat,
+    held stable under backpressure. One frame is one sequence position; the
+    on-chip KV cache holds up to MAX_SEQ positions and the position counter is
+    reset only by rst_n (so a new sequence starts with a reset; rows beyond
+    the position are never read, so no cache clear is needed). Projections
+    have no bias and there is no RoPE. The softmax exp is a polynomial
+    (~1e-5 relative error); since the model rounds probabilities to bf16, the
+    rounded probabilities and the final output match the model exactly in
+    practice.
+  unit_verification: >
+    tb_attention_unit.py: small config (HIDDEN=16, HEADS=2, KV_HEADS=1,
+    HEAD_DIM=8, MAX_SEQ=4, 4 tokens) 64/64 bit-exact vs the fp32 golden;
+    full-dimension config (768/12/4/64, MAX_SEQ=64, 2 tokens) 1536/1536
+    bit-exact. tb_attention_unit.py also asserts no non-finite outputs.
+    Run: `.venv/bin/python run_test.py` (override dims with ATT_* env vars).
+  in_loop_verification: >
+    tb_attention_unit_inloop.py: real layer-10 hidden states and weights from a
+    Granite 4.0-H-350M eager-attention forward pass (9-token prompt); DUT
+    output vs the model's attention output: max abs 0.0, max rel 0.0,
+    0/6912 elements outside 1e-3/1e-3 (bit-exact). Run:
+    `.venv/bin/python run_test.py inloop` (~46 min, ~1.6M cycles/token).
+  formal_verification: >
+    formal/bmc.sby: BMC depth 220 (smtbmc boolector) on a HIDDEN=8/2/1/4/2
+    instance with the FP datapaths abstracted (matrix_unit stub with the exact
+    handshake timing and constant data, fp_unit/fp_exp_seq constant outputs).
+    Properties: tready == !busy; tvalid only while busy; tlast exactly on the
+    HIDDEN-th output beat; at most HIDDEN output beats per activation; a busy
+    period ends only after all HIDDEN output beats were accepted; no output
+    beats before the first complete input frame. PASSES.
+    Run: `sby -f bmc.sby` (cap memory with `ulimit -v` if needed).

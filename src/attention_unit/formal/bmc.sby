@@ -1,0 +1,37 @@
+# BMC of attention_unit AXI-Stream framing / sequencing invariants
+# (FP datapaths abstracted: matrix_unit stub + anyseq fp_unit/fp_exp_seq).
+# Small instance: HIDDEN=8, HEADS=2, KV_HEADS=1, HEAD_DIM=4, MAX_SEQ=2.
+# Run: sby -f bmc.sby
+
+[tasks]
+bmc
+
+[options]
+mode bmc
+depth 220
+timeout 600
+expect pass
+
+[engines]
+smtbmc boolector
+
+[script]
+read_verilog -sv fp_pkg.sv
+read_verilog -sv fp_unit_stub.sv
+read_verilog -sv fp_exp_seq_stub.sv
+read_verilog -sv matrix_unit_stub.sv
+read_verilog -sv fp32_to_bf16_round.sv
+read_verilog -sv attn_softmax_seq.sv
+read_verilog -sv attention_unit.sv
+read_verilog -formal -sv attention_props.sv
+prep -top attention_props
+
+[files]
+../../../systemverilog_fp_unit/rtl/fp_pkg.sv
+fp_unit_stub.sv
+fp_exp_seq_stub.sv
+matrix_unit_stub.sv
+../../../systemverilog_fp_unit/rtl/fp32_to_bf16_round.sv
+../attn_softmax_seq.sv
+../attention_unit.sv
+attention_props.sv
