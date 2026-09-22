@@ -1,0 +1,116 @@
+#Description
+
+llm_guidance: 
+  overall_guidance: Create an in-depth hardware description on how convolution 1d
+  is handled in the python functional model. 
+  Keep the descriptions brief, but comprehensive.
+  Use references to point to information.
+  what_information_to_include:
+  - Description what the unit does.
+  - What python function is being implemented in SystemVerilog.
+  - 
+  what_to_create:
+  - {name}.sv
+  - tb_{name}.sv
+  - if_necessary: a header file 
+
+name: conv1d_unit
+description: >-
+  Implements torch.nn.Conv1d (causal depthwise 1D convolution) as used in
+  Mamba2's SSM preprocessing step (LLM_LAYER_DESCRIPTION.md §2b Step 3).
+  The operation applies a 4-tap FIR filter independently to each of 1536
+  channels.  In the model the Conv1d module is created with
+  in_channels=out_channels=groups=conv_dim=1792 (1536 state-branch x plus
+  2x128 B/C channels); this unit implements the 1536-channel state branch,
+  which is the slice fed to SiLU/SSM downstream.  Weight shape for this
+  slice: (1536, 1, 4) — one 4-tap kernel per channel.  Bias shape: (1536,).
+  Input/output shape: (B, S, 1536).  Left padding of 3 ensures causal
+  (non-lookahead) behavior: at position t the output depends only on
+  positions t, t-1, t-2, t-3.  Each channel is convolved with its own
+  weight vector, producing a weighted sum of the current and three prior
+  time-steps (plus bias), then passed to SiLU activation downstream.
+
+interface:
+  - name: clk
+    direction: input
+    width: 1
+    description: Clock signal
+  - name: rst_n
+    direction: input
+    width: 1
+    description: Active-low asynchronous reset
+  - name: valid_i
+    direction: input
+    width: 1
+    description: Input valid signal
+  - name: data_i
+    direction: input
+    width: 16
+    description: bfloat16 input element
+  - name: ready_o
+    direction: output
+    width: 1
+    description: Ready to accept input
+  - name: valid_o
+    direction: output
+    width: 1
+    description: Output valid signal
+  - name: data_o
+    direction: output
+    width: 16
+    description: bfloat16 output element
+  - name: load_en
+    direction: input
+    width: 1
+    description: Weight/bias load enable
+  - name: load_ch
+    direction: input
+    width: 11
+    description: Channel index for weight/bias load
+  - name: load_tap
+    direction: input
+    width: 2
+    description: Tap index for weight load (0-3)
+  - name: load_wdata
+    direction: input
+    width: 16
+    description: bfloat16 weight/bias data
+  - name: load_is_bias
+    direction: input
+    width: 1
+    description: 0=weight, 1=bias
+
+max_clock_speed: 300 MHz (estimated; datapath is one shared fp_unit op per cycle,
+  same bound as RMSNorm_unit, which shares the fp_unit critical path)
+
+characteristics:
+  latency: 17 clock cycles per output element (1 S_IDLE + 8 FPU ops × 2 cycles + 1 S_OUTPUT)
+  throughput: 1 element per 17 cycles when continuously fed
+  architecture: >
+    Sequential FSM with single shared fp_unit. Computes 4-tap FIR per channel:
+    w0*x[t] + w1*x[t-1] + w2*x[t-2] + w3*x[t-3] + bias. Circular buffer
+    of 3×1536 elements stores previous timesteps. Each FPU operation takes
+    2 cycles (present inputs + read result) due to the fp_unit's registered
+    output and non-blocking assignment semantics.
+  channels: 1536 (depthwise — each channel independent)
+  kernel_size: 4
+  padding: 3 (left/causal)
+  weight_shape: "(1536, 1, 4) bfloat16 — loaded via load interface"
+  bias_shape: "(1536,) bfloat16 — loaded via load interface"
+  buffer: "3 × 1536 × 16-bit = 72 Kbit circular history buffer"
+  design_notes: >
+    Weights are reversed relative to PyTorch's Conv1d convention (cross-correlation)
+    to match the RTL's convolution convention: w[0] multiplies the current input,
+    w[1] multiplies t-1, etc. The golden sample generator applies this reversal.
+  in_loop_verification: >
+    tb_conv1d_unit_inloop.py hooks mamba.in_proj of Granite 4.0-H-350M layer 0 and
+    recomputes the raw causal depthwise conv (F.conv1d, padding=3, groups=1792,
+    pre-SiLU) from the captured projected states. The model's Conv1d module is not
+    invoked on CPU (functional fallback), so a module hook would never fire. The
+    1536 state-branch channels are driven through the DUT: 13824/13824 outputs
+    within 0.1 abs, max abs error 0.03125.
+  formal_verification: >
+    formal/bmc.sby (SymbiYosys BMC, depth 120, fp_unit abstracted via an anyseq
+    stub) proves: an output requires at least one accepted input, never more
+    outputs than inputs, and at most one input outstanding at a time.
+    Run: sby -f bmc.sby.
