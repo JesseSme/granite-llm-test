@@ -1,0 +1,173 @@
+#Description
+
+llm_guidance: 
+  overall_guidance: Create an in-depth hardware description on how a mamba2 layer
+  is handled in the python functional model. 
+  Keep the descriptions brief, but comprehensive.
+  Use references to point to information.
+  what_information_to_include:
+  - Description what the unit does.
+  - What python function is being implemented in SystemVerilog.
+  - 
+  what_to_create:
+  - {name}.sv
+  - tb_{name}.sv
+  - if_necessary: a header file 
+
+name: mamba2_unit
+current_dut: mamba2_unit
+description: >
+  Full GraniteMoeHybridMambaLayer — the selective SSM mixer used in 28 of 32
+  decoder layers (all except layers 10, 13, 17, 27 which use attention).
+  Implements the forward pass of GraniteMoeHybridMambaLayer with the following
+  sub-operations: (1) in_proj linear: hidden_states (B×S×768 bfloat16) →
+  projected (B×S×3376 bfloat16) via weight (3376, 768), split into gate branch
+  (first 1536) and state branch (last 1536); (2) GraniteMoeHybridRMSNormGated:
+  applies RMSNorm to gate branch and element-wise gating to state branch,
+  inputs (B×S×1536 float32, B×S×1536 bfloat16) → (B×S×1536 float32); (3) conv1d
+  (causal, depthwise, kernel=4): state (B×S×1536) → convolved (B×S×1536) with
+  weight (1536, 1, 4) and bias (1536,); (4) SiLU activation: element-wise
+  x·sigmoid(x) on convolved output; (5) SSM selective scan: projects 1536→128
+  for B matrix and C matrix, 1536→48 for dt, then runs recurrence h = A·h +
+  B_t·x_t, y_t = C_t·h with A diagonal (48,128), producing output
+  (B×S×48×32) reshaped to (B×S×1536); (6) gated output norm: element-wise
+  multiply SSM output with gate branch; (7) out_proj linear: (B×S×1536) →
+  (B×S×768 bfloat16) via weight (768, 1536). Total parameters per instance:
+  in_proj 2.59M, gated norm 3.07K, conv1d 6.14K, SSM ~144, out_proj 1.18M.
+  Trace shape: input (1×5×768 bfloat16), in_proj output (1×5×3376 bfloat16),
+  gated norm inputs (1×5×1536 float32 + 1×5×1536 bfloat16) → output
+  (1×5×1536 float32), conv1d/SSM intermediate 1536-wide, out_proj output
+  (1×5×768 bfloat16).
+
+interface:
+  - name: clk
+    direction: input
+    width: 1
+    description: Clock
+  - name: rst_n
+    direction: input
+    width: 1
+    description: >
+      Synchronous active-low reset; also clears the SSM state and the conv
+      history (reset starts a new sequence; weights are retained)
+  - name: load_en
+    direction: input
+    width: 1
+    description: Weight load enable (one bf16 weight per cycle)
+  - name: load_sel
+    direction: input
+    width: 3
+    description: >
+      Weight select: 0=in_proj, 1=out_proj, 2=conv weight, 3=conv bias,
+      4=gated-norm weight, 5/6/7=SSM A_log/D/dt_bias
+  - name: load_out_idx
+    direction: input
+    width: 12
+    description: Output index (clog2(PROJ) = 12)
+  - name: load_in_idx
+    direction: input
+    width: 11
+    description: Input index (clog2(max(HIDDEN, INTER)) = 11)
+  - name: load_wdata
+    direction: input
+    width: 16
+    description: bfloat16 weight value
+  - name: s_axis_tvalid
+    direction: input
+    width: 1
+    description: AXI-Stream input valid (one token frame per transaction)
+  - name: s_axis_tready
+    direction: output
+    width: 1
+    description: AXI-Stream input ready (high only while idle)
+  - name: s_axis_tdata
+    direction: input
+    width: 16
+    description: bfloat16 hidden-state beat (HIDDEN beats per frame)
+  - name: s_axis_tlast
+    direction: input
+    width: 1
+    description: Input last beat (final hidden-state element)
+  - name: m_axis_tvalid
+    direction: output
+    width: 1
+    description: AXI-Stream output valid (mixer output, HIDDEN beats)
+  - name: m_axis_tready
+    direction: input
+    width: 1
+    description: AXI-Stream output ready (downstream backpressure)
+  - name: m_axis_tdata
+    direction: output
+    width: 16
+    description: bfloat16 mixer output beat
+  - name: m_axis_tlast
+    direction: output
+    width: 1
+    description: Output last beat (final mixer output element)
+  - name: busy
+    direction: output
+    width: 1
+    description: Unit is processing/streaming a token (input not accepted)
+
+max_clock_speed: 150 MHz (estimated; the critical path is the matrix_unit /
+  conv1d_unit / ssm_unit binary32 MAC path shared with those units plus the
+  gated-norm sequencer; no STA cell library available)
+
+characteristics:
+  latency: >
+    Weight load: 3,782,688 cycles at 768/1536 (in_proj 3376x768 + out_proj
+    768x1536 + conv 1792x4 + 1792 + 1536 + 3x48 weights), ~25 ms at 150 MHz.
+    Per token: in_proj (768 feed + 3376 x 771 MAC) + conv (1792 x 17) + two
+    accurate SiLU passes (1792 + 1536 elements x ~30) + SSM frame (1840 feed +
+    1536 x ~771 recurrence) + gated norm (~1536 x 12) + out_proj (1536 feed +
+    768 x 1539 MAC) -> ~5.1M cycles per token (~34 ms at 150 MHz). The conv
+    history (3 previous B_C vectors) and the SSM state persist across tokens.
+  throughput: one token per ~5.1M cycles; the in_proj (2.6M) and out_proj
+    (1.2M) projections and the SSM recurrence (1.2M) dominate.
+  resource_usage: >
+    Sub-unit memories: in_proj weights 3376x768x16-bit (4.15 MB), out_proj
+    768x1536x16-bit (1.89 MB), conv weights 1792x4 + bias, SSM state
+    48x32x128 fp32 (0.8 MB) plus its own weight/buffers. This unit adds
+    proj 3376x16, conv raw/out 1792x16 each, ssm 1536x32, gate-SiLU 1536x32,
+    norm weight 1536x16, and 4 binary32 fp_unit instances (MUL/ADD/SQRT/DIV)
+    plus 2 bf16 rounders on top of the instantiated matrix_unit (x2),
+    conv1d_unit, ssm_unit and silu_seq sub-units.
+  notes: >
+    AXI-Stream contract: HIDDEN bf16 beats per frame in and out, tlast on the
+    final beat, output held under backpressure. One frame is one sequence
+    position; the conv history and SSM state carry across frames and are
+    cleared only by rst_n (a new sequence starts with a reset). The conv is
+    loaded with the RTL tap order (tap 0 multiplies the current input, i.e.
+    the model's weight taps are reversed when loading). The two SiLU
+    activations use the accurate silu_seq; the conv one is rounded to bf16
+    (the model casts the conv activation back to bf16) while the gate branch
+    stays fp32 as in the model. The gated norm is computed in fp32
+    (mean of squares divided by the exact INTER constant) with a single bf16
+    rounding of its output, matching the layer's `.to(dtype)` before out_proj.
+    The SSM exponential is a polynomial (~1e-5 relative error), so composite
+    comparisons are tolerance-based.
+  unit_verification: >
+    tb_mamba2_unit.py: small config (HIDDEN=8, INTER=4, HEADS=2, HEAD_DIM=2,
+    D_STATE=2, 4 tokens) - 32/32 within 2e-2 (max abs 0.031). The post-conv
+    chain (SSM, gate SiLU, gated norm, out_proj) is bit-exact when driven with
+    the DUT's own conv outputs; the residual difference is the conv1d_unit's
+    ~1 bf16 ULP deviation from ATen's conv accumulation order, which the
+    recurrence amplifies. Run: `.venv/bin/python run_test.py`.
+  in_loop_verification: >
+    tb_mamba2_unit_inloop.py: real layer-0 Granite 4.0-H-350M mixer inputs and
+    weights; a prefix of the captured sequence is streamed (the conv history
+    and SSM state carry, and each token depends only on earlier tokens).
+    STATUS: FAILS at the full configuration (max abs 1.0, 1408/3840 elements
+    outside 2e-2, no non-finite values) while the small-config unit test
+    passes, so there is a scale-specific issue under investigation (candidate
+    next step: full-config unit test with a 1-2 token sequence, or dumping the
+    DUT's stage buffers in-loop against a Python reference).
+  formal_verification: >
+    formal/bmc.sby: BMC depth 260 (smtbmc boolector) on a HIDDEN=8/INTER=4/
+    HEADS=2/HEAD_DIM=2/D_STATE=2 instance with every datapath abstracted by a
+    stub with exact handshake timing and constant data (matrix_unit,
+    conv1d_unit, ssm_unit, silu_seq, fp_unit, fp_exp_seq). Proves: tready ==
+    !busy; tvalid only while busy; tlast exactly on the HIDDEN-th output beat;
+    at most HIDDEN output beats per activation; a busy period ends only after
+    all HIDDEN output beats were accepted; no output beats before the first
+    complete input frame. PASSES. Run: `sby -f bmc.sby`.

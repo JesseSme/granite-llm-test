@@ -1,0 +1,42 @@
+# BMC of mamba2_unit AXI-Stream framing invariants
+# (all datapaths abstracted: matrix_unit/conv1d_unit/ssm_unit/silu_seq stubs
+# with exact handshake timing and constant data; fp_unit/fp_exp_seq constant).
+# Small instance: HIDDEN=8, INTER=4, HEADS=2, HEAD_DIM=2, D_STATE=2.
+# Run: sby -f bmc.sby
+
+[tasks]
+bmc
+
+[options]
+mode bmc
+depth 260
+timeout 900
+expect pass
+
+[engines]
+smtbmc boolector
+
+[script]
+read_verilog -sv fp_pkg.sv
+read_verilog -sv fp_unit_stub.sv
+read_verilog -sv fp_exp_seq_stub.sv
+read_verilog -sv matrix_unit_stub.sv
+read_verilog -sv conv1d_unit_stub.sv
+read_verilog -sv ssm_unit_stub.sv
+read_verilog -sv silu_seq_stub.sv
+read_verilog -sv fp32_to_bf16_round.sv
+read_verilog -sv mamba2_unit.sv
+read_verilog -formal -sv mamba2_props.sv
+prep -top mamba2_props
+
+[files]
+../../../systemverilog_fp_unit/rtl/fp_pkg.sv
+fp_unit_stub.sv
+fp_exp_seq_stub.sv
+matrix_unit_stub.sv
+conv1d_unit_stub.sv
+ssm_unit_stub.sv
+silu_seq_stub.sv
+../../../systemverilog_fp_unit/rtl/fp32_to_bf16_round.sv
+../mamba2_unit.sv
+mamba2_props.sv
