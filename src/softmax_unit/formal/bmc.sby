@@ -1,0 +1,28 @@
+# BMC of softmax_unit row-FSM invariants (fp_unit/fp_exp blackboxed).
+# Run: sby -f bmc.sby
+
+[tasks]
+bmc
+
+[options]
+mode bmc
+depth 120
+expect pass
+
+[engines]
+smtbmc
+
+[script]
+read_verilog -sv fp_pkg.sv
+read_verilog -sv fp_unit_stub.sv
+read_verilog -sv fp_exp_stub.sv
+read_verilog -sv softmax_unit.sv
+read_verilog -formal -sv softmax_props.sv
+prep -top softmax_props
+
+[files]
+../../../systemverilog_fp_unit/rtl/fp_pkg.sv
+fp_unit_stub.sv
+fp_exp_stub.sv
+../softmax_unit.sv
+softmax_props.sv

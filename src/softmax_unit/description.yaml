@@ -1,0 +1,86 @@
+#Description
+
+llm_guidance: 
+  overall_guidance: Create an in-depth hardware description on how the softmax function
+  is handled in the python functional model. 
+  Keep the descriptions brief, but comprehensive.
+  Use references to point to information.
+  what_information_to_include:
+  - Description what the unit does.
+  - What python function is being implemented in SystemVerilog.
+  - 
+  what_to_create:
+  - {name}.sv
+  - tb_{name}.sv
+  - if_necessary: a header file 
+
+name: softmax_unit
+description: >
+  Implements a numerically stable softmax function for attention score normalization.
+  Used inside the 4 attention layers (layers 10, 13, 17, 27) of the Granite 4.0-H-350M
+  model. The unit computes softmax(x_i) = exp(x_i - max(x)) / sum(exp(x_j - max(x)))
+  per row, where max(x) is subtracted for numerical stability to prevent exp overflow.
+  Input: scores (B, 12, S, S) float32 — scaled QK^T attention logits.
+  Output: attn (B, 12, S, S) float32 — normalized attention weights summing to 1 per row.
+  Operates element-wise across all 12 attention heads independently.
+
+interface:
+  inputs:
+    - name: clk
+      direction: input
+      width: 1
+      description: System clock
+    - name: rst_n
+      direction: input
+      width: 1
+      description: Active-low synchronous reset
+    - name: valid_in
+      direction: input
+      width: 1
+      description: Input data valid signal
+    - name: data_in
+      direction: input
+      width: 32
+      description: Float32 input element (attention score)
+    - name: last_in
+      direction: input
+      width: 1
+      description: Asserted on last element of the row
+  outputs:
+    - name: data_out
+      direction: output
+      width: 32
+      description: Float32 output element (normalized weight)
+    - name: valid_out
+      direction: output
+      width: 1
+      description: Output data valid signal
+    - name: done
+      direction: output
+      width: 1
+      description: Asserted when row processing is complete
+
+max_clock_speed: 100 MHz
+
+characteristics:
+  latency: >
+    Per row of N elements: ~3N (MAX) + 5N (SUB_EXP) + 3N (SUM) + 3N (NORM) = 14N cycles.
+    For N=8: ~112 cycles. For N=32: ~448 cycles.
+  throughput: 1 row per 14N cycles
+  resource_usage: >
+    4x fp_unit instances (MAX, SUB, ADD, DIV) + 1x fp_exp (LUT-based).
+    exp_buf: N x 32-bit SRAM. input_buf: N x 32-bit SRAM.
+  notes: >
+    Numerically stable: subtracts max before exp to prevent overflow.
+    exp() implemented as 256-entry LUT with direct addressing from float32 exponent/mantissa.
+    Sequential FSM with explicit wait cycles to account for fp_unit's 1-cycle registered output.
+    Max absolute error ~0.006 vs PyTorch reference (due to LUT quantization in exp).
+  in_loop_verification: >
+    tb_softmax_unit_inloop.py loads Granite 4.0-H-350M with eager attention and
+    monkeypatches torch.nn.functional.softmax to capture the real (B, 12, S, S)
+    scaled QK^T attention logits and their float32 softmax results. 3888/3888
+    rows pass with max abs error 0.005668 and max row-sum error 0.000000.
+  formal_verification: >
+    formal/bmc.sby (SymbiYosys BMC, depth 120, fp_unit/fp_exp abstracted via
+    anyseq stubs) proves done always coincides with the final valid_out of a
+    row. Run: sby -f bmc.sby.
