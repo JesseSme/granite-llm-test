@@ -1,0 +1,155 @@
+#Description
+
+llm_guidance: 
+  overall_guidance: Create an in-depth hardware description on how the SwiGLU
+  is handled in the python functional model. 
+  Keep the descriptions brief, but comprehensive.
+  Use references to point to information.
+  what_information_to_include:
+  - Description what the unit does.
+  - What python function is being implemented in SystemVerilog.
+  - 
+  what_to_create:
+  - {name}.sv
+  - tb_{name}.sv
+  - if_necessary: a header file 
+
+name: swiglu_unit
+description: >
+  SwiGLU (Gated Linear Unit with SiLU activation) MLP block applied after
+  post_attention_layernorm in every decoder layer. Implements output = SiLU(gate) * up
+  using a fused gate+up projection, element-wise gating, and down projection.
+
+  Step 1 — Fused gate+up projection (matrix_unit):
+    input (BxSx768, bfloat16) -> combined (BxSx4096, bfloat16).
+    Weight (4096, 768) = 3.15M params. Split into gate (first 2048) and up (last 2048).
+
+  Step 2 — SiLU activation (SiLU_unit):
+    gate (BxSx2048, bfloat16) -> activated (BxSx2048, bfloat16).
+    Applies x * sigmoid(x) element-wise.
+
+  Step 3 — Element-wise gating:
+    output = activated * up (BxSx2048, bfloat16).
+
+  Step 4 — Down projection (matrix_unit):
+    (BxSx2048, bfloat16) -> mlp_output (BxSx768, bfloat16).
+    Weight (768, 2048) = 1.57M params.
+
+  Sub-units: matrix_unit (x2 for projections), SiLU_unit (x1 for activation).
+  Tensor shapes (trace): B=1, S=5, hidden=768, intermediate=2048, combined=4096.
+  Dtype: bfloat16 throughout.
+  Python class: GraniteMoeHybridMLP (called as mlp_unit in HW pipeline).
+  See LLM_LAYER_DESCRIPTION.md §5 for full derivation.
+
+interface:
+  - name: clk
+    direction: input
+    width: 1
+    description: Clock
+  - name: rst_n
+    direction: input
+    width: 1
+    description: Synchronous active-low reset (weights are retained)
+  - name: load_en
+    direction: input
+    width: 1
+    description: Weight load enable (one bf16 weight per cycle)
+  - name: load_sel
+    direction: input
+    width: 1
+    description: Weight select (0 = fused gate+up, 1 = down)
+  - name: load_out_idx
+    direction: input
+    width: 12
+    description: Output-feature index (clog2(max(2*INTER, HIDDEN)) = 12)
+  - name: load_in_idx
+    direction: input
+    width: 11
+    description: Input-feature index (clog2(max(HIDDEN, INTER)) = 11)
+  - name: load_wdata
+    direction: input
+    width: 16
+    description: bfloat16 weight value
+  - name: s_axis_tvalid
+    direction: input
+    width: 1
+    description: AXI-Stream input valid (HIDDEN bf16 beats per vector)
+  - name: s_axis_tready
+    direction: output
+    width: 1
+    description: AXI-Stream input ready (high only while idle)
+  - name: s_axis_tdata
+    direction: input
+    width: 16
+    description: bfloat16 input element
+  - name: s_axis_tlast
+    direction: input
+    width: 1
+    description: Input last beat (final hidden-state element)
+  - name: m_axis_tvalid
+    direction: output
+    width: 1
+    description: AXI-Stream output valid (HIDDEN bf16 beats)
+  - name: m_axis_tready
+    direction: input
+    width: 1
+    description: AXI-Stream output ready (downstream backpressure)
+  - name: m_axis_tdata
+    direction: output
+    width: 16
+    description: bfloat16 output element
+  - name: m_axis_tlast
+    direction: output
+    width: 1
+    description: Output last beat (final MLP output element)
+  - name: busy
+    direction: output
+    width: 1
+    description: Unit is computing/streaming (input not accepted)
+
+max_clock_speed: 150 MHz (estimated; the critical path is the matrix_unit
+  binary32 MAC loop (~200 MHz) plus the silu pipeline's fp_unit/DIV stages; no
+  STA cell library available)
+
+characteristics:
+  latency: >
+    Weight load: 2*INTER*HIDDEN + HIDDEN*INTER cycles = 4,718,592 at 768/2048
+    (one bf16 weight per cycle, ~31 ms at 150 MHz). Per vector: input frame
+    (768) + gate+up feed (768) + gate+up drain (4096) + silu
+    (INTER x ~35 cycles = ~72k) + down feed/drain (2048 + 768) plus the
+    projection MAC time (4096 x 771 + 768 x 2051) -> ~4.8M cycles per vector
+    (~32 ms at 150 MHz).
+  throughput: >
+    One 768-wide vector per ~4.8M cycles; the fused gate+up projection (4096
+    outputs over 768 inputs) dominates, followed by the down projection (768
+    outputs over 2048 inputs). The silu is a sequential per-element pipeline
+    (~35 cycles/element, ~72k cycles for INTER=2048) and is not the bottleneck.
+  resource_usage: >
+    Two matrix_unit instances (weights 2*INTER*HIDDEN + HIDDEN*INTER =
+    4.72M x 16-bit = 9.4 MB), one fp_exp_seq (accurate exp), three binary32
+    fp_unit instances (ADD, DIV, MUL) and two fp32_to_bf16_round stages.
+    Buffers: x 768 x 16-bit, combined 4096 x 16-bit.
+  notes: >
+    AXI-Stream contract: HIDDEN bf16 beats per frame with tlast on the final
+    beat; the output frame is HIDDEN bf16 beats, held stable under
+    backpressure. The activation is an accurate inline silu
+    (sigmoid(x) = 1/(1+exp(-x)) in binary32 with the fp_exp_seq polynomial
+    exponential) rather than the LUT-based silu_unit: the LUT sigmoid
+    (<0.5% error, 1/32 input grid) compounds through the down projection to up
+    to ~8% relative output error, while the accurate path matches torch's bf16
+    F.silu to within a rounding step (measured bit-exact in-loop). fp_unit
+    operands are latched into registers between pipeline stages because
+    fp_unit has registered outputs (holding combinational operands across wait
+    states silently clobbers the result).
+  unit_verification: >
+    Covered by mlp_unit's tests (mlp_unit is a pass-through wrapper):
+    tb_mlp_unit.py 64/64 bit-exact vs the fp32 golden (HIDDEN=16, INTER=8,
+    4 vectors).
+  in_loop_verification: >
+    Covered by mlp_unit's in-loop test: real layer-0 MLP inputs/weights from
+    Granite 4.0-H-350M (4 tokens) -> bit-exact vs the sequential-order fp32
+    emulation (max abs/rel 0.0, 0/3072 outside 1e-3) and 0/3072 outside 2e-2
+    vs the model's MLP output (ATen GEMM accumulation order).
+  formal_verification: >
+    Covered by mlp_unit's formal/bmc.sby (framing properties of the whole
+    SwiGLU flow).

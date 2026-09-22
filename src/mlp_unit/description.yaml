@@ -1,0 +1,131 @@
+#Description
+
+llm_guidance: 
+  overall_guidance: Create an in-depth hardware description on how MLP
+  is handled in the python functional model. 
+  Keep the descriptions brief, but comprehensive.
+  Use references to point to information.
+  what_information_to_include:
+  - Description what the unit does.
+  - What python function is being implemented in SystemVerilog.
+  - 
+  what_to_create:
+  - {name}.sv
+  - tb_{name}.sv
+  - if_necessary: a header file 
+
+name: mlp_unit
+description: >
+  Wrapper for the SwiGLU MLP used in GraniteMoeHybridMLP (all 32 decoder layers).
+  Python class: GraniteMoeHybridMLP. Sub-component: SiLU_unit.
+  SwiGLU flow: fused Linear gate+up projects hidden (B×S×768) → combined (B×S×4096),
+  split into gate (B×S×2048) + up (B×S×2048), SiLU activation on gate,
+  element-wise multiply activated × up → (B×S×2048), down projection → (B×S×768).
+  Weight shapes: gate_up W=(4096,768) 3.15M params, down W=(768,2048) 1.57M params.
+  Dtype: bfloat16 throughout. 32 instances total.
+
+interface:
+  - name: clk
+    direction: input
+    width: 1
+    description: Clock
+  - name: rst_n
+    direction: input
+    width: 1
+    description: Synchronous active-low reset (weights are retained)
+  - name: load_en
+    direction: input
+    width: 1
+    description: Weight load enable (one bf16 weight per cycle)
+  - name: load_sel
+    direction: input
+    width: 1
+    description: Weight select (0 = fused gate+up, 1 = down)
+  - name: load_out_idx
+    direction: input
+    width: 12
+    description: Output-feature index (clog2(max(2*INTER, HIDDEN)) = 12)
+  - name: load_in_idx
+    direction: input
+    width: 11
+    description: Input-feature index (clog2(max(HIDDEN, INTER)) = 11)
+  - name: load_wdata
+    direction: input
+    width: 16
+    description: bfloat16 weight value
+  - name: s_axis_tvalid
+    direction: input
+    width: 1
+    description: AXI-Stream input valid (HIDDEN bf16 beats per vector)
+  - name: s_axis_tready
+    direction: output
+    width: 1
+    description: AXI-Stream input ready (high only while idle)
+  - name: s_axis_tdata
+    direction: input
+    width: 16
+    description: bfloat16 input element
+  - name: s_axis_tlast
+    direction: input
+    width: 1
+    description: Input last beat (final hidden-state element)
+  - name: m_axis_tvalid
+    direction: output
+    width: 1
+    description: AXI-Stream output valid (HIDDEN bf16 beats)
+  - name: m_axis_tready
+    direction: input
+    width: 1
+    description: AXI-Stream output ready (downstream backpressure)
+  - name: m_axis_tdata
+    direction: output
+    width: 16
+    description: bfloat16 output element
+  - name: m_axis_tlast
+    direction: output
+    width: 1
+    description: Output last beat (final MLP output element)
+  - name: busy
+    direction: output
+    width: 1
+    description: Unit is computing/streaming (input not accepted)
+
+max_clock_speed: 150 MHz (estimated; identical datapath to swiglu_unit — the
+  wrapper adds no logic; no STA cell library available)
+
+characteristics:
+  latency: >
+    Identical to swiglu_unit: weight load 4,718,592 cycles at 768/2048, then
+    ~4.8M cycles per vector (measured ~4.8M in-loop, excluding the load).
+  throughput: one 768-wide vector per ~4.8M cycles.
+  resource_usage: >
+    Pure wrapper (no additional logic); the SwiGLU datapath is 2 matrix_unit
+    instances (9.4 MB of bf16 weights), 1 fp_exp_seq, 3 fp_unit and 2 bf16
+    rounders.
+  notes: >
+    GraniteMoeHybridMLP is exactly the SwiGLU block, so this unit is a
+    pass-through wrapper around swiglu_unit (the model's class name is the
+    pipeline-facing unit). AXI-Stream framing: HIDDEN bf16 beats per frame in
+    and out, tlast on the final beat, output held under backpressure. Weight
+    load: load_sel 0 = fused gate+up (4096 x 768), 1 = down (768 x 2048). No
+    biases; bf16 throughout.
+  unit_verification: >
+    tb_mlp_unit.py: HIDDEN=16, INTER=8, 4 vectors — 64/64 outputs bit-exact vs
+    the fp32 golden (matrix_unit-style sequential accumulation, bf16
+    roundings, fp32 silu rounded to bf16). Run: `.venv/bin/python run_test.py`.
+  in_loop_verification: >
+    tb_mlp_unit_inloop.py: real layer-0 shared-MLP inputs and weights from a
+    Granite 4.0-H-350M forward pass (4 tokens, each MLP is token-independent).
+    DUT vs the sequential-order fp32 emulation: max abs 0.0, max rel 0.0,
+    0/3072 outside 1e-3 (bit-exact); DUT vs the model's MLP output: max abs
+    7.8e-3, max rel 2.8e-2, 0/3072 outside 2e-2 (differences are ATen's
+    blocked-GEMM accumulation order over the 2048-term down projection).
+    Run: `.venv/bin/python run_test.py inloop` (~44 min).
+  formal_verification: >
+    formal/bmc.sby: BMC depth 260 (smtbmc boolector) on a HIDDEN=8/INTER=4
+    instance with the FP datapaths abstracted (matrix_unit stub with the exact
+    handshake timing and constant data, constant fp_unit/fp_exp_seq). Proves:
+    tready == !busy; tvalid only while busy; tlast exactly on the HIDDEN-th
+    output beat; at most HIDDEN output beats per activation; a busy period ends
+    only after all HIDDEN output beats were accepted; no output beats before
+    the first complete input frame. PASSES. Run: `sby -f bmc.sby`.
