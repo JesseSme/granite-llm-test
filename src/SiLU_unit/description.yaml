@@ -1,0 +1,57 @@
+#Description
+
+llm_guidance: 
+  overall_guidance: Create an in-depth hardware description on how the SiLU function
+  is handled in the python functional model. 
+  Keep the descriptions brief, but comprehensive.
+  Use references to point to information.
+  what_information_to_include:
+  - Description what the unit does.
+  - What python function is being implemented in SystemVerilog.
+  - 
+  what_to_create:
+  - {name}.sv
+  - tb_{name}.sv
+  - if_necessary: a header file 
+
+name: silu_unit
+description: >
+  Implements the SiLUActivation class for the GraniteMoeHybridForCausalLM model.
+  Performs element-wise SiLU (Sigmoid Linear Unit) activation:
+  SiLU(x) = x * sigmoid(x). Computed across all 32 decoder layers in two contexts:
+  (1) SwiGLU MLP gating — activates the gate branch after the fused gate+up
+  projection, tensor shape (B×S×2048) bfloat16, then element-wise multiplied
+  with the up branch; (2) Mamba conv1d activation — activates the state branch
+  after causal depthwise conv1d, tensor shape (B×S×1536).
+  Operation is purely element-wise: for each element x, compute x * sigmoid(x).
+  The sigmoid(x) = 1 / (1 + exp(-x)) and the result is x * sigmoid(x).
+  In inference trace (single-token, B=1, S=5), input/output shape is (1×5×2048)
+  bfloat16. Dtype remains bfloat16 throughout. No weights or parameters —
+  stateless combinational activation function.
+
+interface:
+  - {name: clk,      dir: input,  width: 1,  desc: "System clock"}
+  - {name: rst_n,    dir: input,  width: 1,  desc: "Active-low synchronous reset"}
+  - {name: valid_in, dir: input,  width: 1,  desc: "Input valid strobe"}
+  - {name: data_in,  dir: input,  width: 16, desc: "bfloat16 input operand x"}
+  - {name: data_out, dir: output, width: 16, desc: "bfloat16 result SiLU(x) = x * sigmoid(x)"}
+  - {name: valid_out,dir: output, width: 1,  desc: "Output valid (2 cycles after valid_in)"}
+
+max_clock_speed: 150 MHz (estimated; Yosys gate-level logic-depth ratio 73 vs 22 for
+  sigmoid_unit anchored at its 500 MHz estimate — no liberty/STA available in the toolchain)
+
+characteristics:
+  latency: 2 cycles (1 cycle sigmoid lookup + 1 cycle multiply register)
+  throughput: 1 element per cycle (pipelined)
+  architecture: >
+    Instantiates sigmoid_unit (1-cycle LUT-based sigmoid) and a custom
+    bfloat16 multiplier. Pipeline: cycle 0 captures input and starts sigmoid;
+    cycle 1 sigmoid result ready, input delayed 1 cycle, combinational
+    bfloat16 multiply with RNE rounding; cycle 2 output registered.
+    Total 2-cycle latency, 1-element/cycle throughput.
+    Bfloat16 multiplier handles NaN, Inf, Zero, normals, and subnormals.
+    Signed comparison bounds use explicit signed localparams to avoid
+    SystemVerilog unsigned comparison traps.
+  formal_verification: >
+    formal/bmc.sby (SymbiYosys BMC, depth 10) proves valid_out is valid_in
+    delayed by exactly two clocks for arbitrary inputs. Run: sby -f bmc.sby.

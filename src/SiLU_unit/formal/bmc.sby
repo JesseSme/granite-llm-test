@@ -1,0 +1,24 @@
+# BMC of silu_unit output-valid pipeline invariant (2-cycle latency).
+# Run: sby -f bmc.sby
+
+[tasks]
+bmc
+
+[options]
+mode bmc
+depth 10
+expect pass
+
+[engines]
+smtbmc
+
+[script]
+read_verilog -formal -sv silu_props.sv
+read_verilog -sv sigmoid_unit.sv
+read_verilog -sv silu_unit.sv
+prep -top silu_props
+
+[files]
+silu_props.sv
+../../sigmoid_unit/sigmoid_unit.sv
+../silu_unit.sv
