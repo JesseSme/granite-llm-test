@@ -1,0 +1,97 @@
+#Description
+
+llm_guidance: 
+  overall_guidance: Create an in-depth hardware description on how the RMSNorm
+  is handled in the python functional model. 
+  Keep the descriptions brief, but comprehensive.
+  Use references to point to information.
+  what_information_to_include:
+  - Description what the unit does.
+  - What python function is being implemented in SystemVerilog.
+  - 
+  what_to_create:
+  - {name}.sv
+  - tb_{name}.sv
+  - if_necessary: a header file 
+
+name: rmsnorm_unit
+description: >
+  Hardware unit implementing the RMSNorm (Root Mean Square Normalization) layer,
+  mapping the GraniteMoeHybridRMSNorm Python class (LLM_LAYER_DESCRIPTION.md §2a, §3a, §4, §6).
+  Normalizes each hidden-state vector independently over the last dimension:
+    output = input / sqrt(mean(input²) + eps) * weight
+  where eps = 1e-5. Weight shape: (768,) in bfloat16.
+  Input/output tensor shape: (B, S, 768) bfloat16.
+  Used in 32 decoder layers (input_layernorm + post_attention_layernorm) and
+  once as final_norm, for 65 total invocations per forward pass (see inference_trace.json steps 4,9,15,…).
+  Also shared by GraniteMoeHybridRMSNormGated (steps 7,18,29,…) which applies
+  RMSNorm to a gate branch (B,S,1536) float32 while element-wise gating a
+  state branch (B,S,1536) bfloat16, with weight shape (1536,) ×2.
+
+interface:
+  ports:
+    - name: clk
+      direction: input
+      width: 1
+      description: Clock signal
+    - name: rst_n
+      direction: input
+      width: 1
+      description: Active-low synchronous reset
+    - name: valid_in
+      direction: input
+      width: 1
+      description: Input data valid strobe
+    - name: data_in
+      direction: input
+      width: 16
+      description: bfloat16 input data
+    - name: weight_valid
+      direction: input
+      width: 1
+      description: Weight data valid strobe
+    - name: weight_in
+      direction: input
+      width: 16
+      description: bfloat16 weight data
+    - name: data_out
+      direction: output
+      width: 16
+      description: bfloat16 output data
+    - name: valid_out
+      direction: output
+      width: 1
+      description: Output data valid strobe
+    - name: busy
+      direction: output
+      width: 1
+      description: Unit is processing (cannot accept new input)
+
+max_clock_speed: 300 MHz
+
+characteristics:
+  latency: ~4613 cycles per vector (768 elements × 3 cycles/element for ACCUM_SQ + NORMALIZE, plus MEAN_EPS and SQRT overhead)
+  throughput: 1 vector per ~4613 cycles (throughput = WIDTH / 4613 elements/cycle)
+  resource_usage: >
+    Uses 1 fp_unit instance (shared for MUL, ADD, DIV, SQRT operations),
+    768 × 16-bit input buffer (12 Kbit BRAM),
+    768 × 16-bit weight buffer (12 Kbit BRAM),
+    and small control registers.
+  notes: >
+    Sequential FSM processing one vector of WIDTH elements at a time.
+    Uses bfloat16 precision at every step (matching PyTorch bfloat16 computation).
+    Weight vector is loaded once and reused for all sequence positions.
+    5-phase pipeline: BUFFER_INPUT → ACCUM_SQ → MEAN_EPS → SQRT_RMS → NORMALIZE.
+  in_loop_verification: >
+    tb_rmsnorm_unit_inloop.py captures real activations from 6 non-gated RMSNorm
+    modules (input_layernorm layers 0/1/10/31, layer-0 post_attention_layernorm,
+    final norm) of Granite 4.0-H-350M. 41472/41472 outputs bit-exact vs the RTL
+    bfloat16 emulation. Note the model computes the variance in float32 while the
+    RTL accumulates in bfloat16, so individual outputs deviate up to ~11.5% rel /
+    48 abs vs the PyTorch layer output; the unit reproduces the intended bfloat16
+    algorithm, not the fp32-internal PyTorch result.
+  formal_verification: >
+    formal/bmc.sby (SymbiYosys BMC, depth 80, fp_unit abstracted via an anyseq
+    stub) proves: no output before the weight vector is fully loaded, output
+    only while busy, busy only rises after an accepted input, and exactly WIDTH
+    outputs per accepted vector. Run: sby -f bmc.sby.
