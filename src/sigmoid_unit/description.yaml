@@ -1,0 +1,74 @@
+#Description
+
+llm_guidance: 
+  overall_guidance: Create an in-depth hardware description on how the sigmoid function
+  is handled in the python functional model. 
+  Keep the descriptions brief, but comprehensive.
+  Use references to point to information.
+  what_information_to_include:
+  - Description what the unit does.
+  - What python function is being implemented in SystemVerilog.
+  - 
+  what_to_create:
+  - {name}.sv
+  - tb_{name}.sv
+  - if_necessary: a header file 
+
+name: sigmoid_unit
+description: >
+  Computes the sigmoid activation function element-wise: σ(x) = 1 / (1 + exp(-x)).
+  Maps each input element to the range (0, 1). Serves as a core building block
+  for the SiLU activation (SiLU = x * σ(x)), used in both the SwiGLU MLP gate
+  path (shape B×S×2048) and the Mamba2 conv1d output (shape B×S×1536).
+  Operates on bfloat16 tensors; output dtype matches input dtype.
+  [Ref: LLM_LAYER_DESCRIPTION.md §2b Step 4, §5 Step 2]
+
+interface:
+  - name: clk
+    direction: input
+    width: 1
+    description: Clock signal
+  - name: rst_n
+    direction: input
+    width: 1
+    description: Active-low asynchronous reset
+  - name: valid_in
+    direction: input
+    width: 1
+    description: Input valid signal
+  - name: data_in
+    direction: input
+    width: 16
+    description: bfloat16 input value
+  - name: data_out
+    direction: output
+    width: 16
+    description: bfloat16 sigmoid output
+  - name: valid_out
+    direction: output
+    width: 1
+    description: Output valid signal (1 cycle latency)
+
+max_clock_speed: 500 MHz (estimated, purely combinational datapath with registered output)
+
+characteristics:
+  latency: 1 clock cycle (registered output)
+  throughput: 1 result per clock cycle (when continuously fed)
+  architecture: >
+    Two 256-entry lookup tables (pos_lut and neg_lut), each storing 16-bit
+    bfloat16 values. The LUT address is computed from the bfloat16 exponent
+    and mantissa bits using a priority-encoded case statement.
+    Address = |x| * 32, covering input range [0, ~8].
+    For negative inputs, neg_lut provides 1 - sigmoid(|x|) directly,
+    avoiding floating-point subtraction. Symmetry: σ(-x) = 1 - σ(x).
+    Special cases: NaN→0.5, +inf→1.0, -inf→0.0, ±0→0.5.
+  luts: 2 × 256 × 16 = 8192 bits (1 KB)
+  accuracy: < 0.5% relative error for |x| ≤ 8. Values beyond ±8 saturate.
+  design_notes: >
+    The dual-LUT approach (positive and negative) avoids the complexity of
+    bfloat16 floating-point subtraction. Each LUT stores pre-computed
+    bfloat16 values generated from Python's math.exp. The address computation
+    uses a direct exponent-to-address mapping that avoids barrel shifters.
+  formal_verification: >
+    formal/bmc.sby (SymbiYosys BMC, depth 10) proves valid_out is valid_in
+    delayed by exactly one clock for arbitrary inputs. Run: sby -f bmc.sby.

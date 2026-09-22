@@ -1,0 +1,22 @@
+# BMC of sigmoid_unit output-valid pipeline invariant.
+# Run: sby -f bmc.sby
+
+[tasks]
+bmc
+
+[options]
+mode bmc
+depth 10
+expect pass
+
+[engines]
+smtbmc
+
+[script]
+read_verilog -formal -sv sigmoid_props.sv
+read_verilog -sv sigmoid_unit.sv
+prep -top sigmoid_props
+
+[files]
+sigmoid_props.sv
+../sigmoid_unit.sv
