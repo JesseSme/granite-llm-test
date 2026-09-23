@@ -15,12 +15,14 @@ smtbmc
 [script]
 read_verilog -sv fp_pkg.sv
 read_verilog -sv fp_unit_stub.sv
+read_verilog -sv fp32_to_bf16_round.sv
 read_verilog -sv conv1d_unit.sv
 read_verilog -formal -sv conv1d_props.sv
 prep -top conv1d_props
 
 [files]
 ../../../systemverilog_fp_unit/rtl/fp_pkg.sv
+../../../systemverilog_fp_unit/rtl/fp32_to_bf16_round.sv
 fp_unit_stub.sv
 ../conv1d_unit.sv
 conv1d_props.sv

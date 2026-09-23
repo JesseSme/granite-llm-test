@@ -87,7 +87,13 @@ characteristics:
   latency: 17 clock cycles per output element (1 S_IDLE + 8 FPU ops × 2 cycles + 1 S_OUTPUT)
   throughput: 1 element per 17 cycles when continuously fed
   architecture: >
-    Sequential FSM with single shared fp_unit. Computes 4-tap FIR per channel:
+    Sequential FSM with a single shared fp32 fp_unit (W_EXP=8, W_MANT=23).
+    The bfloat16 operands are widened to fp32 exactly (high-half placement),
+    so all four products, their sum and the bias are computed in fp32 and only
+    the result is rounded to bfloat16 once (fp32_to_bf16_round), matching
+    ATen's causal_conv1d kernel (fp32 accumulation, one rounding); the unit is
+    bit-exact against the Python reference.
+    Computes 4-tap FIR per channel:
     w0*x[t] + w1*x[t-1] + w2*x[t-2] + w3*x[t-3] + bias. Circular buffer
     of 3×1536 elements stores previous timesteps. Each FPU operation takes
     2 cycles (present inputs + read result) due to the fp_unit's registered

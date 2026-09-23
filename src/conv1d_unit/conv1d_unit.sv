@@ -57,9 +57,11 @@ module conv1d_unit #(
   // ----------------------------------------------------------------
   // Parameters
   // ----------------------------------------------------------------
-  localparam int W_EXP  = 8;
-  localparam int W_MANT = 7;
-  localparam int W_FP   = 1 + W_EXP + W_MANT;
+  localparam int W_EXP    = 8;
+  localparam int W_MANT   = 7;   // bfloat16 storage format
+  localparam int W_FP     = 1 + W_EXP + W_MANT;
+  localparam int W_MANT32 = 23;  // fp32 arithmetic format
+  localparam int W_FP32   = 1 + W_EXP + W_MANT32;
   localparam int BUF_DEPTH = PADDING;
 
   // ----------------------------------------------------------------
@@ -92,17 +94,21 @@ module conv1d_unit #(
   logic [$clog2(CHANNELS)-1:0] ch_cnt;
 
   // ----------------------------------------------------------------
-  // FPU instance (bfloat16: W_EXP=8, W_MANT=7)
+  // FPU instance (fp32: W_EXP=8, W_MANT=23). The bfloat16 operands are
+  // widened to fp32 (exact: the 16 bits go in the high half), so all four
+  // products, their sum and the bias are computed in fp32 and only the final
+  // result is rounded to bfloat16 - matching the model's causal_conv1d_fn
+  // kernel (fp32 accumulation, a single rounding).
   // ----------------------------------------------------------------
   fp_pkg::op_t  fpu_mode;
   fp_pkg::rounding_t fpu_rm;
-  logic [W_FP-1:0] fpu_a, fpu_b, fpu_c;
-  logic [W_FP-1:0] fpu_y;
+  logic [W_FP32-1:0] fpu_a, fpu_b, fpu_c;
+  logic [W_FP32-1:0] fpu_y;
   /* verilator lint_off UNUSEDSIGNAL */
   logic [1:0]  fpu_cmp;
   logic [4:0]  fpu_flags;
 
-  fp_unit #(.W_EXP(W_EXP), .W_MANT(W_MANT)) u_fpu (
+  fp_unit #(.W_EXP(W_EXP), .W_MANT(W_MANT32)) u_fpu (
     .clk   (clk),
     .rst_n (rst_n),
     .mode  (fpu_mode),
@@ -118,7 +124,14 @@ module conv1d_unit #(
   // ----------------------------------------------------------------
   // Pipeline registers
   // ----------------------------------------------------------------
-  logic [W_FP-1:0] acc;
+  logic [W_FP32-1:0] acc;
+
+  function automatic logic [W_FP32-1:0] bf16_to_fp32(input logic [W_FP-1:0] v);
+    bf16_to_fp32 = {v, {(W_FP32 - W_FP){1'b0}}};
+  endfunction
+
+  logic [W_FP-1:0] out_bf16;
+  fp32_to_bf16_round u_round_out (.x(fpu_y), .y(out_bf16));
   logic [W_FP-1:0] cur_input;
   logic [$clog2(CHANNELS)-1:0] cur_channel;
 
@@ -218,8 +231,8 @@ module conv1d_unit #(
             cur_channel <= ch_cnt;
             // Present MUL(weight[c,0], data_i)
             fpu_mode <= fp_pkg::OP_MUL;
-            fpu_a    <= weight_mem[ch_cnt][0];
-            fpu_b    <= data_i;
+            fpu_a    <= bf16_to_fp32(weight_mem[ch_cnt][0]);
+            fpu_b    <= bf16_to_fp32(data_i);
             fpu_c    <= '0;
             state    <= S_WAIT_MUL0;
           end
@@ -245,8 +258,8 @@ module conv1d_unit #(
           acc <= fpu_y;
           // Present MUL(weight[c,1], buf[c][0])  — t-1
           fpu_mode <= fp_pkg::OP_MUL;
-          fpu_a    <= weight_mem[cur_channel][1];
-          fpu_b    <= buf_rd[0];
+          fpu_a    <= bf16_to_fp32(weight_mem[cur_channel][1]);
+          fpu_b    <= bf16_to_fp32(buf_rd[0]);
           fpu_c    <= '0;
           state    <= S_WAIT_MUL1;
         end
@@ -272,8 +285,8 @@ module conv1d_unit #(
           acc <= fpu_y;
           // Present MUL(weight[c,2], buf[c][1])  — t-2
           fpu_mode <= fp_pkg::OP_MUL;
-          fpu_a    <= weight_mem[cur_channel][2];
-          fpu_b    <= buf_rd[1];
+          fpu_a    <= bf16_to_fp32(weight_mem[cur_channel][2]);
+          fpu_b    <= bf16_to_fp32(buf_rd[1]);
           fpu_c    <= '0;
           state    <= S_WAIT_MUL2;
         end
@@ -299,8 +312,8 @@ module conv1d_unit #(
           acc <= fpu_y;
           // Present MUL(weight[c,3], buf[c][2])  — t-3
           fpu_mode <= fp_pkg::OP_MUL;
-          fpu_a    <= weight_mem[cur_channel][3];
-          fpu_b    <= buf_rd[2];
+          fpu_a    <= bf16_to_fp32(weight_mem[cur_channel][3]);
+          fpu_b    <= bf16_to_fp32(buf_rd[2]);
           fpu_c    <= '0;
           state    <= S_WAIT_MUL3;
         end
@@ -330,7 +343,7 @@ module conv1d_unit #(
           // Present ADD(sum_of_products, bias)
           fpu_mode <= fp_pkg::OP_ADD;
           fpu_a    <= fpu_y;
-          fpu_b    <= bias_mem[cur_channel];
+          fpu_b    <= bf16_to_fp32(bias_mem[cur_channel]);
           fpu_c    <= '0;
           state    <= S_WAIT_OUT;
         end
@@ -339,7 +352,7 @@ module conv1d_unit #(
         // OUTPUT: fpu_y = final result (sum + bias)
         // ----------------------------------------------------------
         S_OUTPUT: begin
-          data_o  <= fpu_y;
+          data_o  <= out_bf16;
           valid_o <= 1'b1;
 
           // Advance channel counter
