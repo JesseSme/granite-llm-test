@@ -71,7 +71,7 @@ module mamba2_unit #(
   output logic              busy
 );
 
-  localparam logic [31:0] C_EPS = 32'h358637BD;  // 1e-6
+  localparam logic [31:0] C_EPS = 32'h3727C5AC;  // 1e-5 (config.rms_norm_eps)
   localparam logic [31:0] C_ONE = 32'h3F800000;
 
   // fp32 bit pattern of the positive integer INTER (INTER < 2^24, exact).

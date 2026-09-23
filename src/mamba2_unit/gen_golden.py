@@ -12,7 +12,7 @@ Emulates GraniteMoeHybridMambaLayer in float32 with the model's rounding points:
                y = D*x + sum_s h*C) in fp32 with torch's exp/softplus; the
                hardware exp is a polynomial (~1e-5 relative), so the unit test
                uses a tolerance
-  gated norm : xn = ssm_out * silu(gate) in fp32, y = xn/sqrt(mean(xn^2)+1e-6)
+  gated norm : xn = ssm_out * silu(gate) in fp32, y = xn/sqrt(mean(xn^2)+1e-5)
                * weight, rounded once to bf16 (matching .to(dtype))
   out_proj   : same as in_proj
 
@@ -102,7 +102,7 @@ def reference(x, W_in, Wc, cb, W_out, norm_w, A_log, D, dt_bias,
     g = F.silu(gate.float())                        # gate branch stays fp32
     xn = ssm_out * g
     var = xn.pow(2).mean(-1, keepdim=True)
-    y = xn / torch.sqrt(var + 1e-6) * norm_w.float()
+    y = xn / torch.sqrt(var + 1e-5) * norm_w.float()
     return linear_seq(y.bfloat16(), W_out)
 
 

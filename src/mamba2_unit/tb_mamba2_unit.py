@@ -26,11 +26,11 @@ D_STATE = int(os.environ.get("MAMBA_D_STATE", "2"))
 INTER = HEADS * HEAD_DIM
 CONV_CH = INTER + 2 * D_STATE
 PROJ = INTER + CONV_CH + HEADS
-# The conv1d_unit matches ATen's bf16 conv only to within ~1 bf16 ULP (its
-# accumulation order differs at rounding boundaries, as verified in the conv
-# unit's own in-loop test); the SSM recurrence then amplifies those ULP
-# differences, so the composite comparison uses a tolerance. The post-conv
-# chain is exact when driven with the DUT's own conv outputs.
+# The conv1d_unit accumulates in fp32 with a single bfloat16 rounding, so it
+# is bit-exact against the reference (verified at the full configuration:
+# 768/768, max abs error 0.0). The composite comparison keeps a small
+# tolerance as a guard; the post-conv chain is exact when driven with the
+# DUT's own conv outputs.
 TOL = 2e-2
 
 

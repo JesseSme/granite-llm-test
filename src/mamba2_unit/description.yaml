@@ -148,11 +148,12 @@ characteristics:
     comparisons are tolerance-based.
   unit_verification: >
     tb_mamba2_unit.py: small config (HIDDEN=8, INTER=4, HEADS=2, HEAD_DIM=2,
-    D_STATE=2, 4 tokens) - 32/32 within 2e-2 (max abs 0.031). The post-conv
-    chain (SSM, gate SiLU, gated norm, out_proj) is bit-exact when driven with
-    the DUT's own conv outputs; the residual difference is the conv1d_unit's
-    ~1 bf16 ULP deviation from ATen's conv accumulation order, which the
-    recurrence amplifies. Run: `.venv/bin/python run_test.py`.
+    D_STATE=2, 4 tokens) - 32/32, max abs/rel error 0.0; full config
+    (HIDDEN=768, INTER=1536, HEADS=48, HEAD_DIM=32, D_STATE=128, 1 token) -
+    768/768, max abs/rel error 0.0 (bit-exact). conv1d_unit now accumulates
+    in fp32 with a single bfloat16 rounding (matching causal_conv1d_fn), which
+    removed the ~1 bf16 ULP drift the SSM recurrence used to amplify.
+    Run: `.venv/bin/python run_test.py`.
   in_loop_verification: >
     tb_mamba2_unit_inloop.py: real layer-0 Granite 4.0-H-350M mixer inputs and
     weights; a prefix of the captured sequence is streamed (the conv history
