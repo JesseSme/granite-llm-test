@@ -1,0 +1,64 @@
+name: output_projection_unit
+description: >
+  Output projection unit (lm_head). Final linear layer mapping the
+  final-norm hidden states to vocabulary logits:
+  (B x S x 768) bfloat16 -> (B x S x 100352) bfloat16, followed by the
+  element-wise logits scaling. Weight shape is (100352, 768) = 77M params,
+  tied with embedding_lookup_unit (the same matrix is shared between the
+  input embedding and the output head); no bias.
+  Python reference: GraniteMoeHybridForCausalLM.forward -
+  `logits = self.lm_head(hidden_states); logits = logits / self.config.logits_scaling`
+  with logits_scaling = 3. NOTE: the original unit description said
+  "logits * 3"; the installed modeling code divides (line 1277 of
+  modeling_granitemoehybrid.py), and this unit implements the division.
+  Executes once after final_norm, the last compute step before argmax/softmax
+  for next-token prediction. Reference: LLM_LAYER_DESCRIPTION.md section 7.
+
+interface:
+  clk: input, 1 bit
+  rst_n: input, 1 bit (active low)
+  load_en: input, 1 bit (weight load strobe)
+  load_out_idx: input, $clog2(VOCAB) bits (output row index)
+  load_in_idx: input, $clog2(HIDDEN) bits (input column index)
+  load_wdata: input, 16 bits (bfloat16 weight)
+  s_axis_tvalid/tready/tdata/tlast: AXI-Stream input (HIDDEN bf16 beats)
+  m_axis_tvalid/tready/tdata/tlast: AXI-Stream output (VOCAB bf16 beats)
+  busy: output, 1 bit
+
+max_clock_speed: 150 MHz (same binary32 MAC datapath as matrix_unit, which is
+  the critical path; estimate from the Verilator timing of the sibling units)
+
+characteristics:
+  latency: VOCAB * (HIDDEN + 3) + 2 clock cycles per input vector (HIDDEN MAC
+    cycles per output plus the last-product add, the scale divide and the
+    bf16 round)
+  throughput: one output element per HIDDEN + 3 cycles; the input vector is
+    accepted while the projection is idle
+  architecture: >
+    matrix_unit (HIDDEN -> VOCAB, binary32 sequential accumulation, one
+    bfloat16 rounding) feeding a one-entry scale stage: the bfloat16 logit is
+    widened to fp32, divided by 3.0 with an fp32 fp_unit (OP_DIV, W_MANT=23),
+    and rounded to bfloat16 once with fp32_to_bf16_round. The scale stage
+    holds one result under downstream backpressure and only accepts the next
+    projected beat when free.
+  scaling: "logits / 3 (config.logits_scaling), fp32 division then one bf16 round"
+  bias: none (tied LM head, mamba_proj_bias/attention_bias are false)
+  vocab: 100352 (parameterized; tests use a reduced or sampled vocabulary
+    because the full 77M-parameter table cannot be simulated)
+
+verification:
+  lint: Verilator -Wall clean
+  unit: tb_output_projection_unit.py (HIDDEN=32, VOCAB=64, 4 vectors) -
+    bit-exact 256/256, max abs/rel error 0.0 vs the torch reference
+  in_loop: tb_output_projection_unit_inloop.py - real Granite 4.0-H-350M
+    final-norm hidden states and the tied lm_head weight; 512 of the 100352
+    vocabulary rows are sampled (argmax rows plus seeded random rows) and only
+    those weight rows are loaded, because the full table cannot be simulated.
+    Bit-exact 1024/1024, max abs/rel error 0.0 vs
+    model.lm_head(hidden_states) / logits_scaling.
+  formal: formal/bmc.sby - BMC depth 60 (smtbmc boolector) with a
+    handshake-exact matrix_unit stub. STATUS: the property set is not passing
+    yet (assertions on the shadow beat counters fail early; the props file
+    needs refinement - likely the stub's tready/tvalid race at reset). The
+    port-level invariants (tlast only with tvalid, no data loss under
+    backpressure) are in place; this is the remaining checklist item.

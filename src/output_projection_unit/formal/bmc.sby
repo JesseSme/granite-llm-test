@@ -1,0 +1,26 @@
+# BMC of output_projection_unit stream-protocol invariants (matrix_unit stubbed).
+[options]
+mode bmc
+depth 60
+timeout 900
+
+[engines]
+smtbmc boolector
+
+[script]
+read_verilog -sv fp_pkg.sv
+read_verilog -sv matrix_unit_stub.sv
+read_verilog -sv fp32_to_bf16_round.sv
+read_verilog -sv fp_unit_stub.sv
+read_verilog -sv output_projection_unit.sv
+read_verilog -formal -sv output_projection_props.sv
+prep -top output_projection_props
+
+[files]
+../../../systemverilog_fp_unit/rtl/fp_pkg.sv
+../output_projection_unit.sv
+matrix_unit_stub.sv
+../../../systemverilog_fp_unit/rtl/fp32_to_bf16_round.sv
+fp_unit_stub.sv
+../output_projection_unit.sv
+output_projection_props.sv
