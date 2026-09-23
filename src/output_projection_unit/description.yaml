@@ -57,8 +57,8 @@ verification:
     Bit-exact 1024/1024, max abs/rel error 0.0 vs
     model.lm_head(hidden_states) / logits_scaling.
   formal: formal/bmc.sby - BMC depth 60 (smtbmc boolector) with a
-    handshake-exact matrix_unit stub. STATUS: the property set is not passing
-    yet (assertions on the shadow beat counters fail early; the props file
-    needs refinement - likely the stub's tready/tvalid race at reset). The
-    port-level invariants (tlast only with tvalid, no data loss under
-    backpressure) are in place; this is the remaining checklist item.
+    handshake-exact matrix_unit stub. PASSES (depth 60). Properties (gated on
+    an observed reset so free initial register values cannot fail them): no
+    output beat without at least one accepted input beat, tlast only with a
+    valid beat, no data loss (an unaccepted valid beat stays valid), and the
+    DUT never drives its own load port.

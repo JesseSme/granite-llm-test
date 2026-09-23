@@ -21,8 +21,7 @@
 - [x] 5. Write cocotb testbench and runner
 - [x] 6. Run RTL simulation against golden sample
 - [x] 7. In-loop verification (real final-norm hidden states, sampled vocab)
-- [~] 8. Formal verification (`formal/bmc.sby`, depth 60) - props
-      refinement pending (shadow-counter assertions fail early)
+- [x] 8. Formal verification (`formal/bmc.sby`, depth 60, PASS)
 - [x] 9. Update `description.yaml`
 - [x] 10. Clear `current_dut` field
 
