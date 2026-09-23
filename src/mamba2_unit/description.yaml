@@ -15,7 +15,6 @@ llm_guidance:
   - if_necessary: a header file 
 
 name: mamba2_unit
-current_dut: mamba2_unit
 description: >
   Full GraniteMoeHybridMambaLayer — the selective SSM mixer used in 28 of 32
   decoder layers (all except layers 10, 13, 17, 27 which use attention).
@@ -158,11 +157,15 @@ characteristics:
     tb_mamba2_unit_inloop.py: real layer-0 Granite 4.0-H-350M mixer inputs and
     weights; a prefix of the captured sequence is streamed (the conv history
     and SSM state carry, and each token depends only on earlier tokens).
-    STATUS: FAILS at the full configuration (max abs 1.0, 1408/3840 elements
-    outside 2e-2, no non-finite values) while the small-config unit test
-    passes, so there is a scale-specific issue under investigation (candidate
-    next step: full-config unit test with a 1-2 token sequence, or dumping the
-    DUT's stage buffers in-loop against a Python reference).
+    PASSES at the full configuration: 5 streamed tokens, max abs error
+    3.906e-03, max rel error 7.692e-03, 0/3840 elements outside 2e-2, no
+    non-finite values. Getting here required two fixes: conv1d_unit now
+    accumulates in fp32 with a single bfloat16 rounding (the old per-MAC
+    bf16 rounding drifted ~1 bf16 ULP and the SSM recurrence amplified it),
+    and the gated norm now uses eps=1e-5 (the model's rms_norm_eps) instead
+    of 1e-6 - a sqrt(10) = 3.16x gain error at the tokens where
+    RMS(x*silu(gate)) << sqrt(eps) and the norm is eps-dominated.
+    Run: `.venv/bin/python run_test.py inloop`.
   formal_verification: >
     formal/bmc.sby: BMC depth 260 (smtbmc boolector) on a HIDDEN=8/INTER=4/
     HEADS=2/HEAD_DIM=2/D_STATE=2 instance with every datapath abstracted by a

@@ -39,11 +39,11 @@
       found and fixed: the norm used eps=1e-6 instead of the model's
       rms_norm_eps=1e-5, i.e. a sqrt(10) = 3.16x gain error at exactly those
       eps-dominated tokens. C_EPS is now 1e-5 (0x3727C5AC) and gen_golden uses
-      1e-5; small-config unit test still passes. Re-running the in-loop with
-      the eps fix is the next step (~2 h).
+      1e-5. In-loop re-run with both fixes: PASSES (max abs 3.906e-03, max rel
+      7.692e-03, 0/3840 outside 2e-2, no non-finite values). Unit is complete.
 - [x] 9. Formal verification (`formal/bmc.sby`, depth 260, PASS)
 - [x] 10. Update `description.yaml` — interface, Fmax, characteristics
-- [ ] 11. Clear `current_dut` field (kept set: the unit is not complete)
+- [x] 11. Clear `current_dut` field
 
 ## Notes / issues found
 
