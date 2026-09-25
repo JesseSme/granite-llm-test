@@ -1,0 +1,39 @@
+name: granite_layer
+description: >
+  One Granite 4.0-H-350M decoder layer (mamba type) for a single token:
+  input_layernorm -> mamba2 mixer -> residual (residual_multiplier 0.246) ->
+  post_attention_layernorm -> MLP (SwiGLU) -> residual (* 0.246).
+  Reuses the individually verified units (rmsnorm_unit x2, mamba2_unit,
+  residual_adder_unit x2, mlp_unit). Weight loads are routed by load_sel:
+  0..7 = mamba2_unit sub-selects, 8 = input_layernorm, 9 =
+  post_attention_layernorm, 10 = MLP gate+up, 11 = MLP down.
+
+interface:
+  clk/rst_n: 1 bit
+  load_en, load_sel[3:0], load_out_idx, load_in_idx, load_wdata[15:0]
+  s_axis_* / m_axis_*: AXI-Stream, HIDDEN=768 bf16 beats per vector
+  busy: output, 1 bit
+
+characteristics:
+  latency: per token, approximately (norm1 + mamba2 + residual + norm2 + MLP +
+    residual) cycles - dominated by the mixer (768 MACs x 3376 outputs) and the
+    MLP
+  architecture: >
+    Valid-only handshakes for the norms and residual adders (no tready), AXI
+    for the mixer and MLP. Feed counters saturate at HIDDEN; phases advance on
+    the capture counters, handling the residual adder's 3-cycle latency and
+    the buffered norms.
+
+verification:
+  lint: Verilator -Wall clean
+  in_loop: tb_granite_layer_inloop.py - real layer-0 weights and activations,
+    one token: max abs error 0.0078, 0 mismatches (tolerance 2e-2), PASSED.
+    This test exposed the rmsnorm_unit bf16 datapath bug: with the fp32 fix the
+    layer output matches the model's layer-0 output.
+  formal: not yet written for the layer wrapper (sub-units have their own).
+
+follow_ups:
+  - rmsnorm_unit gen_golden.py/tb still emulate the old bf16 datapath and need
+    updating to fp32 (the layer in-loop test is the current evidence).
+  - attention-type layers (GraniteMoeHybridAttention) are not covered by this
+    wrapper yet.

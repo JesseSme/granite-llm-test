@@ -25,3 +25,15 @@
 - [x] 9. Formal verification — formal/bmc.sby (BMC depth 80, fp_unit abstracted):
       no output before weights loaded, output only while busy, busy rises only
       after an accepted input, exactly WIDTH outputs per vector; PASS
+
+## 2026-09 fp32 datapath fix
+
+- The unit previously ran all arithmetic (including the 768-term sum-of-squares
+  accumulation) through a bfloat16 fp_unit, which made the variance ~10% off
+  and used eps = 7.63e-6 (bf16 0x3780). The datapath is now fp32 (fp_unit
+  W_MANT=23, operands widened, one fp32_to_bf16_round at the output) and
+  eps = 1e-5 (config.rms_norm_eps), matching GraniteMoeHybridRMSNorm.
+- Evidence: the granite_layer single-layer single-token in-loop test failed
+  with 453/768 mismatches before the fix and PASSES (max abs 0.0078) after.
+- Still to do: update gen_golden.py/tb_rmsnorm_unit.py (they emulate the old
+  bf16 behaviour) and add fp32_to_bf16_round.sv to the formal file lists.

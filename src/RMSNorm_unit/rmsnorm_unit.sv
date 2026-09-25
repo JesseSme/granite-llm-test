@@ -55,10 +55,10 @@ module rmsnorm_unit #(
   logic [W_CNT-1:0] cnt;
 
   // -------------------------------------------------------- data regs
-  logic [W_DATA-1:0] sum_sq;
+  logic [31:0] sum_sq;
   logic [W_DATA-1:0] mean_eps_val;
-  logic [W_DATA-1:0] rms_val;
-  logic [W_DATA-1:0] fp_result;
+  logic [31:0] rms_val;
+  logic [31:0] fp_result;
 
   // --------------------------------------------------- storage
   logic [W_DATA-1:0] input_mem  [0:WIDTH-1];
@@ -66,16 +66,23 @@ module rmsnorm_unit #(
   logic              weight_loaded;
 
   // -------------------------------------------------- FPU interface
-  logic [W_DATA-1:0]   fpu_a, fpu_b, fpu_c;
+  logic [31:0]   fpu_a, fpu_b, fpu_c;
   fp_pkg::op_t         fpu_mode;
   fp_pkg::rounding_t   fpu_rm;
   // Package names are fully qualified (no `import fp_pkg::*;`) because
   // Yosys/SymbiYosys do not support module-scope imports.
-  logic [W_DATA-1:0]   fpu_y;
+  logic [31:0]   fpu_y;
   logic [1:0]          fpu_cmp;
   logic [4:0]          fpu_flags;
 
-  fp_unit #(.W_EXP(8), .W_MANT(7)) u_fp (
+  function automatic logic [31:0] bf16_to_fp32(input logic [W_DATA-1:0] v);
+    bf16_to_fp32 = {v, 16'h0};
+  endfunction
+
+  logic [W_DATA-1:0] out_bf16;
+  fp32_to_bf16_round u_round_out (.x(fpu_y), .y(out_bf16));
+
+  fp_unit #(.W_EXP(8), .W_MANT(23)) u_fp (
     .clk(clk), .rst_n(rst_n),
     .mode(fpu_mode), .rm(fpu_rm),
     .a(fpu_a), .b(fpu_b), .c(fpu_c),
@@ -98,9 +105,9 @@ module rmsnorm_unit #(
 
   // -------------------------------------------------- pre-computed constants
   // eps = ~1e-5 in bfloat16: 0x3780 = 2^-17 ≈ 7.6e-6
-  localparam logic [W_DATA-1:0] EPS = 16'h3780;
+  localparam logic [31:0] EPS = 32'h3727C5AC;  // 1e-5 (config.rms_norm_eps)
   // WIDTH = 768 in bfloat16: 1.5 * 2^9 = 0x4440
-  localparam logic [W_DATA-1:0] WIDTH_BF16 = 16'h4440;
+  localparam logic [31:0] WIDTH_FP32 = 32'h44400000;  // (float)WIDTH
 
   // -------------------------------------------------- FPU drive
   always_comb begin
@@ -113,8 +120,8 @@ module rmsnorm_unit #(
     if (state == ACCUM_SQ) begin
       if (fp_phase == FP_IDLE) begin
         fpu_mode = fp_pkg::OP_MUL;
-        fpu_a = input_mem[cnt];
-        fpu_b = input_mem[cnt];
+        fpu_a = bf16_to_fp32(input_mem[cnt]);
+        fpu_b = bf16_to_fp32(input_mem[cnt]);
       end else if (fp_phase == FP_SQUARE) begin
         fpu_mode = fp_pkg::OP_ADD;
         fpu_a = sum_sq;
@@ -124,7 +131,7 @@ module rmsnorm_unit #(
       if (fp_phase == FP_IDLE) begin
         fpu_mode = fp_pkg::OP_DIV;
         fpu_a = sum_sq;
-        fpu_b = WIDTH_BF16;
+        fpu_b = WIDTH_FP32;
       end else if (fp_phase == FP_DIV_MEAN) begin
         fpu_mode = fp_pkg::OP_ADD;
         fpu_a = fpu_y;  // DIV result from previous cycle
@@ -136,12 +143,12 @@ module rmsnorm_unit #(
     end else if (state == NORMALIZE) begin
       if (fp_phase == FP_IDLE) begin
         fpu_mode = fp_pkg::OP_DIV;
-        fpu_a = input_mem[cnt];
+        fpu_a = bf16_to_fp32(input_mem[cnt]);
         fpu_b = rms_val;
       end else if (fp_phase == FP_DIV_NORM) begin
         fpu_mode = fp_pkg::OP_MUL;
         fpu_a = fpu_y;  // DIV result from previous cycle's registered output
-        fpu_b = weight_mem[cnt];
+        fpu_b = bf16_to_fp32(weight_mem[cnt]);
       end
     end
   end
@@ -274,7 +281,7 @@ module rmsnorm_unit #(
             end
             FP_MUL_WT: begin
               // fpu_y = normalized * weight
-              data_out  <= fpu_y;
+              data_out  <= out_bf16;
               valid_out <= 1'b1;
               cnt       <= cnt + 1'b1;
               fp_phase  <= FP_IDLE;
