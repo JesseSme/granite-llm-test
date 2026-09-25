@@ -1,4 +1,4 @@
-status: "verified: unit bit-exact 256/256, in-loop bit-exact 1024/1024 on 512 sampled vocab rows, formal depth 60 PASS; implements logits/logits_scaling (division)"
+# status: verified: unit bit-exact 256/256, in-loop bit-exact 1024/1024 on 512 sampled vocab rows, formal depth 60 PASS; implements logits/logits_scaling (division)
 name: output_projection_unit
 description: >
   Output projection unit (lm_head). Final linear layer mapping the

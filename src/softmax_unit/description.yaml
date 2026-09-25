@@ -1,4 +1,4 @@
-status: "verified: in-loop 3888/3888 rows, formal depth 120 PASS; LUT exp is coarse (max rel 0.209), attention uses attn_softmax_seq instead"
+# status: verified: in-loop 3888/3888 rows, formal depth 120 PASS; LUT exp is coarse (max rel 0.209), attention uses attn_softmax_seq instead
 #Description
 
 llm_guidance: 

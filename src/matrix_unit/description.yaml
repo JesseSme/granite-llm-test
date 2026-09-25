@@ -1,4 +1,4 @@
-status: "verified: in-loop q/k_proj bit-exact; formal PASS; rare (<0.1%) 1-ULP ATen GEMM-order differences documented"
+# status: verified: in-loop q/k_proj bit-exact; formal PASS; rare (<0.1%) 1-ULP ATen GEMM-order differences documented
 #Description
 
 llm_guidance: 

@@ -1,4 +1,4 @@
-status: "verified: unit + in-loop PASS after the fp32 datapath fix (was bf16 accumulation, ~10% variance error, eps 7.63e-6); formal files still need fp32_to_bf16_round.sv"
+# status: verified: unit + in-loop PASS after the fp32 datapath fix (was bf16 accumulation, ~10% variance error, eps 7.63e-6); formal files still need fp32_to_bf16_round.sv
 #Description
 
 llm_guidance: 

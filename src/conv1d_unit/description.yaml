@@ -1,4 +1,4 @@
-status: "verified: unit 49152/49152 bit-exact (fp32 accumulation), in-loop 13824/13824 bit-exact; formal depth 120 PASS"
+# status: verified: unit 49152/49152 bit-exact (fp32 accumulation), in-loop 13824/13824 bit-exact; formal depth 120 PASS
 #Description
 
 llm_guidance: 
