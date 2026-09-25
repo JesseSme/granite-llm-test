@@ -144,3 +144,17 @@ characteristics:
     stubs) proves: s_axis_tready == !busy, output valid only while busy, tlast
     only on the final output beat, busy rises only after an accepted input beat,
     and exactly OUT_FEATURES output beats per input vector. Run: sby -f bmc.sby.
+
+optimization:
+  branch: opt/matrix-unit
+  goal: raise clock frequency (accumulator loop is the critical path), then
+    throughput (L parallel output lanes), keeping every output bit-identical.
+  plan: >
+    P3 register the multiplier operands and m_axis_tdata (RAM off the
+    arithmetic path, enables SRAM inference); P1 add LANES (L full MAC
+    datapaths for L different output rows, bit-exact because each row keeps
+    the exact sequential fp32 add order); P2 pipeline fp_add in the fp library
+    plus P interleaved accumulator contexts; P4 balanced leading-one detectors.
+  out_of_scope: any reassociation, fp_fma fusion, wide exact accumulator, or
+    removing the 0+p0 seed (all change results).
+  status: investigation complete; implementation not started.
