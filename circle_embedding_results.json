@@ -1,0 +1,147 @@
+{
+  "model_file": "/home/jese/tinyllm/granite-4.0-h-350m/model.safetensors",
+  "embedding_key": "model.embed_tokens.weight",
+  "embedding_shape": [
+    100352,
+    768
+  ],
+  "tokens_tested": 5000,
+  "global_min": -0.19921875,
+  "global_max": 0.1611328125,
+  "scale": 0.19921875,
+  "results": {
+    "4": {
+      "bits_per_value": 4,
+      "mappings": {
+        "sine": {
+          "rmse": 0.011920924227538125,
+          "mae": 0.01032726542154948,
+          "max_error": 0.020824048668146133,
+          "exact_bf16_percent": 0.3191145833333333,
+          "theoretical_ratio": 4.0
+        },
+        "cosine": {
+          "rmse": 0.02076229272900095,
+          "mae": 0.015905557759602864,
+          "max_error": 0.1992187350988388,
+          "exact_bf16_percent": 0.11822916666666666,
+          "theoretical_ratio": 4.0
+        }
+      }
+    },
+    "6": {
+      "bits_per_value": 6,
+      "mappings": {
+        "sine": {
+          "rmse": 0.0028419709780431223,
+          "mae": 0.002461389636993408,
+          "max_error": 0.00496666831895709,
+          "exact_bf16_percent": 1.2107552083333335,
+          "theoretical_ratio": 2.6666666666666665
+        },
+        "cosine": {
+          "rmse": 0.0190875196682059,
+          "mae": 0.011989667256673176,
+          "max_error": 0.1992187350988388,
+          "exact_bf16_percent": 0.5780729166666667,
+          "theoretical_ratio": 2.6666666666666665
+        }
+      }
+    },
+    "8": {
+      "bits_per_value": 8,
+      "mappings": {
+        "sine": {
+          "rmse": 0.0007021172573610254,
+          "mae": 0.0006079158703486125,
+          "max_error": 0.001227178261615336,
+          "exact_bf16_percent": 5.012369791666667,
+          "theoretical_ratio": 2.0
+        },
+        "cosine": {
+          "rmse": 0.018988506354257403,
+          "mae": 0.01106794687906901,
+          "max_error": 0.1992187350988388,
+          "exact_bf16_percent": 2.504166666666667,
+          "theoretical_ratio": 2.0
+        }
+      }
+    },
+    "10": {
+      "bits_per_value": 10,
+      "mappings": {
+        "sine": {
+          "rmse": 0.00017558080616126654,
+          "mae": 0.0001524011472860972,
+          "max_error": 0.0003059016598854214,
+          "exact_bf16_percent": 20.04921875,
+          "theoretical_ratio": 1.6
+        },
+        "cosine": {
+          "rmse": 0.01898243720233936,
+          "mae": 0.010840228525797526,
+          "max_error": 0.1992187350988388,
+          "exact_bf16_percent": 9.990052083333333,
+          "theoretical_ratio": 1.6
+        }
+      }
+    },
+    "12": {
+      "bits_per_value": 12,
+      "mappings": {
+        "sine": {
+          "rmse": 4.360277820985629e-05,
+          "mae": 3.77359872063001e-05,
+          "max_error": 7.644158904440701e-05,
+          "exact_bf16_percent": 61.46541666666666,
+          "theoretical_ratio": 1.3333333333333333
+        },
+        "cosine": {
+          "rmse": 0.018982064795986145,
+          "mae": 0.010784124883015951,
+          "max_error": 0.1992187350988388,
+          "exact_bf16_percent": 30.514036458333333,
+          "theoretical_ratio": 1.3333333333333333
+        }
+      }
+    },
+    "14": {
+      "bits_per_value": 14,
+      "mappings": {
+        "sine": {
+          "rmse": 1.0846438568367116e-05,
+          "mae": 9.459657222032548e-06,
+          "max_error": 1.9088416593149304e-05,
+          "exact_bf16_percent": 89.30757812499999,
+          "theoretical_ratio": 1.1428571428571428
+        },
+        "cosine": {
+          "rmse": 0.01898204103625474,
+          "mae": 0.010769938405354817,
+          "max_error": 0.1992187350988388,
+          "exact_bf16_percent": 44.45997395833333,
+          "theoretical_ratio": 1.1428571428571428
+        }
+      }
+    },
+    "16": {
+      "bits_per_value": 16,
+      "mappings": {
+        "sine": {
+          "rmse": 2.709747621170312e-06,
+          "mae": 2.3400237473348778e-06,
+          "max_error": 4.783738404512405e-06,
+          "exact_bf16_percent": 97.29645833333333,
+          "theoretical_ratio": 1.0
+        },
+        "cosine": {
+          "rmse": 0.01898203946622739,
+          "mae": 0.010766416041056315,
+          "max_error": 0.1992187350988388,
+          "exact_bf16_percent": 48.440989583333334,
+          "theoretical_ratio": 1.0
+        }
+      }
+    }
+  }
+}

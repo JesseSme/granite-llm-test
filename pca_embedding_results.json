@@ -1,0 +1,174 @@
+{
+  "model_file": "/home/jese/tinyllm/granite-4.0-h-350m/model.safetensors",
+  "embedding_key": "model.embed_tokens.weight",
+  "embedding_shape": [
+    100352,
+    768
+  ],
+  "pca_training_tokens": 20000,
+  "test_tokens": 5000,
+  "chunk_size": 1024,
+  "original_storage_bytes": 154140672,
+  "results": {
+    "8": {
+      "rank": 8,
+      "explained_variance": 0.11168249152976537,
+      "rmse": 0.024705334269631053,
+      "mae": 0.019549716440836588,
+      "max_absolute_error": 0.19827444851398468,
+      "average_cosine_similarity": 0.366362109375,
+      "exact_bf16_percentage": 0.08692708333333334,
+      "storage": {
+        "original_bytes": 154140672,
+        "compressed_bf16_bytes": 1619456,
+        "compressed_fp32_bytes": 3237376,
+        "compression_ratio_bf16": 95.18052481821056,
+        "compression_ratio_fp32": 47.612842005377196,
+        "token_bytes_bf16": 16,
+        "token_bytes_fp32": 32,
+        "basis_bytes_bf16": 12288,
+        "basis_bytes_fp32": 24576
+      }
+    },
+    "16": {
+      "rank": 16,
+      "explained_variance": 0.13955535789753348,
+      "rmse": 0.024305926208091952,
+      "mae": 0.019205943552652996,
+      "max_absolute_error": 0.19680242240428925,
+      "average_cosine_similarity": 0.40208511962890625,
+      "exact_bf16_percentage": 0.10161458333333333,
+      "storage": {
+        "original_bytes": 154140672,
+        "compressed_bf16_bytes": 3237376,
+        "compressed_fp32_bytes": 6473216,
+        "compression_ratio_bf16": 47.612842005377196,
+        "compression_ratio_fp32": 23.812069920113895,
+        "token_bytes_bf16": 32,
+        "token_bytes_fp32": 64,
+        "basis_bytes_bf16": 24576,
+        "basis_bytes_fp32": 49152
+      }
+    },
+    "32": {
+      "rank": 32,
+      "explained_variance": 0.18083314519409222,
+      "rmse": 0.023686883279225288,
+      "mae": 0.018695353190104166,
+      "max_absolute_error": 0.18680809438228607,
+      "average_cosine_similarity": 0.4527469055175781,
+      "exact_bf16_percentage": 0.11494791666666668,
+      "storage": {
+        "original_bytes": 154140672,
+        "compressed_bf16_bytes": 6473216,
+        "compressed_fp32_bytes": 12944896,
+        "compression_ratio_bf16": 23.812069920113895,
+        "compression_ratio_fp32": 11.907447692125144,
+        "token_bytes_bf16": 64,
+        "token_bytes_fp32": 128,
+        "basis_bytes_bf16": 49152,
+        "basis_bytes_fp32": 98304
+      }
+    },
+    "64": {
+      "rank": 64,
+      "explained_variance": 0.24732736443400666,
+      "rmse": 0.022676326231495667,
+      "mae": 0.01786455790201823,
+      "max_absolute_error": 0.17201374471187592,
+      "average_cosine_similarity": 0.5216745300292969,
+      "exact_bf16_percentage": 0.13247395833333334,
+      "storage": {
+        "original_bytes": 154140672,
+        "compressed_bf16_bytes": 12944896,
+        "compressed_fp32_bytes": 25888256,
+        "compression_ratio_bf16": 11.907447692125144,
+        "compression_ratio_fp32": 5.954077091944702,
+        "token_bytes_bf16": 128,
+        "token_bytes_fp32": 256,
+        "basis_bytes_bf16": 98304,
+        "basis_bytes_fp32": 196608
+      }
+    },
+    "128": {
+      "rank": 128,
+      "explained_variance": 0.35845673509945714,
+      "rmse": 0.020975150611952025,
+      "mae": 0.01650255686442057,
+      "max_absolute_error": 0.15165305137634277,
+      "average_cosine_similarity": 0.6142761596679688,
+      "exact_bf16_percentage": 0.16088541666666667,
+      "storage": {
+        "original_bytes": 154140672,
+        "compressed_bf16_bytes": 25888256,
+        "compressed_fp32_bytes": 51774976,
+        "compression_ratio_bf16": 5.954077091944702,
+        "compression_ratio_fp32": 2.977126865302651,
+        "token_bytes_bf16": 256,
+        "token_bytes_fp32": 512,
+        "basis_bytes_bf16": 196608,
+        "basis_bytes_fp32": 393216
+      }
+    },
+    "256": {
+      "rank": 256,
+      "explained_variance": 0.5414121022726048,
+      "rmse": 0.017823567883715308,
+      "mae": 0.014004195404052735,
+      "max_absolute_error": 0.13443367183208466,
+      "average_cosine_similarity": 0.740979638671875,
+      "exact_bf16_percentage": 0.22369791666666666,
+      "storage": {
+        "original_bytes": 154140672,
+        "compressed_bf16_bytes": 51774976,
+        "compressed_fp32_bytes": 103548416,
+        "compression_ratio_bf16": 2.977126865302651,
+        "compression_ratio_fp32": 1.4885855134664736,
+        "token_bytes_bf16": 512,
+        "token_bytes_fp32": 1024,
+        "basis_bytes_bf16": 393216,
+        "basis_bytes_fp32": 786432
+      }
+    },
+    "384": {
+      "rank": 384,
+      "explained_variance": 0.693447980529828,
+      "rmse": 0.014695437565835292,
+      "mae": 0.011493490727742512,
+      "max_absolute_error": 0.12953925132751465,
+      "average_cosine_similarity": 0.831773681640625,
+      "exact_bf16_percentage": 0.30570312499999996,
+      "storage": {
+        "original_bytes": 154140672,
+        "compressed_bf16_bytes": 77661696,
+        "compressed_fp32_bytes": 155321856,
+        "compression_ratio_bf16": 1.9847708708292953,
+        "compression_ratio_fp32": 0.992395249255842,
+        "token_bytes_bf16": 768,
+        "token_bytes_fp32": 1536,
+        "basis_bytes_bf16": 589824,
+        "basis_bytes_fp32": 1179648
+      }
+    },
+    "512": {
+      "rank": 512,
+      "explained_variance": 0.8221170784355236,
+      "rmse": 0.011341871055192711,
+      "mae": 0.008763884989420573,
+      "max_absolute_error": 0.10942026972770691,
+      "average_cosine_similarity": 0.9026101318359375,
+      "exact_bf16_percentage": 0.43679687500000003,
+      "storage": {
+        "original_bytes": 154140672,
+        "compressed_bf16_bytes": 103548416,
+        "compressed_fp32_bytes": 207095296,
+        "compression_ratio_bf16": 1.4885855134664736,
+        "compression_ratio_fp32": 0.7442982770598517,
+        "token_bytes_bf16": 1024,
+        "token_bytes_fp32": 2048,
+        "basis_bytes_bf16": 786432,
+        "basis_bytes_fp32": 1572864
+      }
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "model_file": "/home/jese/tinyllm/granite-4.0-h-350m/model.safetensors",
+  "embedding_key": "model.embed_tokens.weight",
+  "embedding_shape": [
+    100352,
+    768
+  ],
+  "tokens_tested": 100352,
+  "total_values": 77070336,
+  "unique_values": {
+    "sign": 2,
+    "exponent": 30,
+    "mantissa": 128,
+    "full_bf16": 5391
+  },
+  "fixed_width_bits": {
+    "sign": 1,
+    "exponent": 5,
+    "mantissa": 7,
+    "separate": 13,
+    "full_bf16": 13
+  },
+  "entropy": {
+    "sign": 0.9998450290357281,
+    "exponent": 2.5522121505541255,
+    "mantissa": 6.972004834088432,
+    "separate": 10.524062013678286,
+    "full_bf16": 10.475373796437006
+  },
+  "exact_reconstruction_percent": 100.0,
+  "storage": {
+    "original_mib": 147.0,
+    "full_lookup_mib": 119.44778251647949,
+    "separate_lookup_mib": 119.43763566017151,
+    "full_lookup_ratio": 1.2306632815031062,
+    "separate_lookup_ratio": 1.230767832831604
+  }
+}

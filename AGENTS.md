@@ -201,8 +201,9 @@ The Python model is the source of truth. Capture activations with
 
 ## Notes
 
-- `systemverilog_fp_unit/` is an independent git repository (no remote); git
-  will not stage paths inside it from this repo. Changes there (stubs, fp_unit
-  parameters) must be tracked separately.
+- `systemverilog_fp_unit/` is a git submodule
+  (`git@github.com:JesseSme/systemverilog_fp_unit.git`); changes inside it must
+  be committed and pushed in that repository first, then the updated pointer
+  committed here (the outer repo only records the pinned commit).
 - `.gitignore` excludes `oss-cad-suite/`, `granite-4.0-h-350m/`, `sim_build*/`,
   `results.xml`, `**/formal/bmc*/`, `__pycache__/`, `.venv`.

@@ -1,0 +1,38 @@
+{
+  "model_file": "/home/jese/tinyllm/granite-4.0-h-350m/model.safetensors",
+  "embedding_key": "model.embed_tokens.weight",
+  "shape": [
+    100352,
+    768
+  ],
+  "tokens": 100352,
+  "dimensions": 768,
+  "total_values": 77070336,
+  "entropy": {
+    "full_bf16": 10.475373796437006,
+    "sign": 0.9998450290357281,
+    "exponent": 2.5522121505541255,
+    "exponent_delta": 3.216231550718697,
+    "exponent_delta2": 3.998525680727862,
+    "mantissa": 6.972004834088432,
+    "mantissa_delta": 7.71377714103283,
+    "mantissa_delta2": 8.508291357831414
+  },
+  "best": {
+    "exponent_entropy": 2.5522121505541255,
+    "mantissa_entropy": 6.972004834088432,
+    "combined_bits_per_value": 10.524062013678286,
+    "estimated_mib": 96.68981975066926,
+    "ratio": 1.5203255149204322
+  },
+  "unique_values": {
+    "full_bf16": 5391,
+    "sign": 2,
+    "exponent": 30,
+    "mantissa": 128,
+    "exponent_delta": 72,
+    "mantissa_delta": 255,
+    "exponent_delta2": 127,
+    "mantissa_delta2": 509
+  }
+}

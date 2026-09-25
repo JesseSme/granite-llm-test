@@ -1,0 +1,34 @@
+{
+  "model_file": "/home/jese/tinyllm/granite-4.0-h-350m/model.safetensors",
+  "embedding_key": "model.embed_tokens.weight",
+  "shape": [
+    100352,
+    768
+  ],
+  "total_values": 77070336,
+  "original_bytes": 154140672,
+  "entropy_bits_per_value": {
+    "sign": 0.9998450290357281,
+    "exponent": 2.5522121505541255,
+    "mantissa": 6.972004834088432,
+    "combined": 10.524062013678286
+  },
+  "ans": {
+    "frequency_bits": 12,
+    "sign_bytes": 9975862,
+    "exponent_bytes": 24983937,
+    "mantissa_bytes": 67518765,
+    "payload_bytes": 102478564,
+    "frequency_table_bytes": 772,
+    "total_bytes": 102479336,
+    "payload_bits_per_value": 10.637406744924533,
+    "total_bits_per_value": 10.637486879517432,
+    "payload_ratio": 1.5041259945836087,
+    "total_ratio": 1.5041146636625358
+  },
+  "lossless_verification": {
+    "tested_vectors": 8,
+    "failures": 0,
+    "exact": true
+  }
+}

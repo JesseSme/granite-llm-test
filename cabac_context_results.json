@@ -1,0 +1,1369 @@
+{
+  "global_entropy": 6.972004834088432,
+  "conditional_entropy": {
+    "previous_mantissa": 6.971838890799924,
+    "exponent": 6.923423877572827,
+    "hashed_context": 6.923229876253388
+  },
+  "bits_saved": {
+    "previous_mantissa": 0.00016594328850860762,
+    "exponent": 0.04858095651560479,
+    "hashed_context": 0.04877495783504404
+  },
+  "top_pairs": [
+    {
+      "pair": [
+        1,
+        1
+      ],
+      "count": 9546
+    },
+    {
+      "pair": [
+        2,
+        1
+      ],
+      "count": 9532
+    },
+    {
+      "pair": [
+        2,
+        2
+      ],
+      "count": 9522
+    },
+    {
+      "pair": [
+        4,
+        3
+      ],
+      "count": 9471
+    },
+    {
+      "pair": [
+        2,
+        3
+      ],
+      "count": 9471
+    },
+    {
+      "pair": [
+        3,
+        1
+      ],
+      "count": 9462
+    },
+    {
+      "pair": [
+        1,
+        3
+      ],
+      "count": 9448
+    },
+    {
+      "pair": [
+        1,
+        4
+      ],
+      "count": 9440
+    },
+    {
+      "pair": [
+        4,
+        2
+      ],
+      "count": 9435
+    },
+    {
+      "pair": [
+        1,
+        5
+      ],
+      "count": 9417
+    },
+    {
+      "pair": [
+        4,
+        1
+      ],
+      "count": 9403
+    },
+    {
+      "pair": [
+        3,
+        3
+      ],
+      "count": 9397
+    },
+    {
+      "pair": [
+        3,
+        2
+      ],
+      "count": 9389
+    },
+    {
+      "pair": [
+        5,
+        2
+      ],
+      "count": 9362
+    },
+    {
+      "pair": [
+        6,
+        3
+      ],
+      "count": 9361
+    },
+    {
+      "pair": [
+        1,
+        2
+      ],
+      "count": 9360
+    },
+    {
+      "pair": [
+        3,
+        4
+      ],
+      "count": 9350
+    },
+    {
+      "pair": [
+        5,
+        3
+      ],
+      "count": 9308
+    },
+    {
+      "pair": [
+        5,
+        1
+      ],
+      "count": 9296
+    },
+    {
+      "pair": [
+        7,
+        2
+      ],
+      "count": 9285
+    },
+    {
+      "pair": [
+        1,
+        6
+      ],
+      "count": 9271
+    },
+    {
+      "pair": [
+        2,
+        4
+      ],
+      "count": 9268
+    },
+    {
+      "pair": [
+        5,
+        4
+      ],
+      "count": 9261
+    },
+    {
+      "pair": [
+        1,
+        7
+      ],
+      "count": 9252
+    },
+    {
+      "pair": [
+        2,
+        6
+      ],
+      "count": 9244
+    },
+    {
+      "pair": [
+        8,
+        2
+      ],
+      "count": 9227
+    },
+    {
+      "pair": [
+        8,
+        3
+      ],
+      "count": 9212
+    },
+    {
+      "pair": [
+        8,
+        1
+      ],
+      "count": 9204
+    },
+    {
+      "pair": [
+        6,
+        2
+      ],
+      "count": 9203
+    },
+    {
+      "pair": [
+        3,
+        6
+      ],
+      "count": 9174
+    },
+    {
+      "pair": [
+        2,
+        9
+      ],
+      "count": 9169
+    },
+    {
+      "pair": [
+        4,
+        4
+      ],
+      "count": 9167
+    },
+    {
+      "pair": [
+        2,
+        5
+      ],
+      "count": 9160
+    },
+    {
+      "pair": [
+        1,
+        9
+      ],
+      "count": 9159
+    },
+    {
+      "pair": [
+        6,
+        1
+      ],
+      "count": 9155
+    },
+    {
+      "pair": [
+        7,
+        4
+      ],
+      "count": 9150
+    },
+    {
+      "pair": [
+        4,
+        7
+      ],
+      "count": 9146
+    },
+    {
+      "pair": [
+        8,
+        4
+      ],
+      "count": 9114
+    },
+    {
+      "pair": [
+        3,
+        5
+      ],
+      "count": 9106
+    },
+    {
+      "pair": [
+        7,
+        1
+      ],
+      "count": 9104
+    },
+    {
+      "pair": [
+        5,
+        5
+      ],
+      "count": 9102
+    },
+    {
+      "pair": [
+        2,
+        7
+      ],
+      "count": 9102
+    },
+    {
+      "pair": [
+        6,
+        6
+      ],
+      "count": 9082
+    },
+    {
+      "pair": [
+        7,
+        3
+      ],
+      "count": 9078
+    },
+    {
+      "pair": [
+        3,
+        7
+      ],
+      "count": 9075
+    },
+    {
+      "pair": [
+        5,
+        8
+      ],
+      "count": 9054
+    },
+    {
+      "pair": [
+        9,
+        4
+      ],
+      "count": 9038
+    },
+    {
+      "pair": [
+        1,
+        10
+      ],
+      "count": 9035
+    },
+    {
+      "pair": [
+        9,
+        2
+      ],
+      "count": 9033
+    },
+    {
+      "pair": [
+        1,
+        8
+      ],
+      "count": 9024
+    }
+  ],
+  "top_triples": [
+    {
+      "triple": [
+        17,
+        14,
+        10
+      ],
+      "count": 216
+    },
+    {
+      "triple": [
+        4,
+        2,
+        29
+      ],
+      "count": 206
+    },
+    {
+      "triple": [
+        23,
+        10,
+        23
+      ],
+      "count": 203
+    },
+    {
+      "triple": [
+        21,
+        19,
+        7
+      ],
+      "count": 202
+    },
+    {
+      "triple": [
+        9,
+        36,
+        13
+      ],
+      "count": 200
+    },
+    {
+      "triple": [
+        25,
+        2,
+        13
+      ],
+      "count": 199
+    },
+    {
+      "triple": [
+        8,
+        14,
+        11
+      ],
+      "count": 197
+    },
+    {
+      "triple": [
+        3,
+        3,
+        20
+      ],
+      "count": 197
+    },
+    {
+      "triple": [
+        2,
+        13,
+        0
+      ],
+      "count": 196
+    },
+    {
+      "triple": [
+        38,
+        25,
+        2
+      ],
+      "count": 188
+    },
+    {
+      "triple": [
+        26,
+        7,
+        48
+      ],
+      "count": 186
+    },
+    {
+      "triple": [
+        3,
+        4,
+        18
+      ],
+      "count": 186
+    },
+    {
+      "triple": [
+        57,
+        26,
+        7
+      ],
+      "count": 185
+    },
+    {
+      "triple": [
+        13,
+        63,
+        26
+      ],
+      "count": 185
+    },
+    {
+      "triple": [
+        9,
+        45,
+        4
+      ],
+      "count": 184
+    },
+    {
+      "triple": [
+        4,
+        18,
+        17
+      ],
+      "count": 184
+    },
+    {
+      "triple": [
+        12,
+        61,
+        19
+      ],
+      "count": 183
+    },
+    {
+      "triple": [
+        2,
+        38,
+        25
+      ],
+      "count": 180
+    },
+    {
+      "triple": [
+        66,
+        19,
+        17
+      ],
+      "count": 180
+    },
+    {
+      "triple": [
+        14,
+        11,
+        47
+      ],
+      "count": 179
+    },
+    {
+      "triple": [
+        65,
+        18,
+        4
+      ],
+      "count": 179
+    },
+    {
+      "triple": [
+        86,
+        8,
+        14
+      ],
+      "count": 178
+    },
+    {
+      "triple": [
+        99,
+        2,
+        6
+      ],
+      "count": 178
+    },
+    {
+      "triple": [
+        26,
+        1,
+        95
+      ],
+      "count": 178
+    },
+    {
+      "triple": [
+        1,
+        65,
+        18
+      ],
+      "count": 178
+    },
+    {
+      "triple": [
+        43,
+        23,
+        23
+      ],
+      "count": 178
+    },
+    {
+      "triple": [
+        75,
+        4,
+        2
+      ],
+      "count": 177
+    },
+    {
+      "triple": [
+        11,
+        32,
+        3
+      ],
+      "count": 176
+    },
+    {
+      "triple": [
+        1,
+        102,
+        30
+      ],
+      "count": 176
+    },
+    {
+      "triple": [
+        58,
+        4,
+        3
+      ],
+      "count": 176
+    },
+    {
+      "triple": [
+        23,
+        23,
+        10
+      ],
+      "count": 175
+    },
+    {
+      "triple": [
+        51,
+        47,
+        9
+      ],
+      "count": 175
+    },
+    {
+      "triple": [
+        71,
+        3,
+        3
+      ],
+      "count": 175
+    },
+    {
+      "triple": [
+        2,
+        65,
+        23
+      ],
+      "count": 174
+    },
+    {
+      "triple": [
+        42,
+        3,
+        36
+      ],
+      "count": 174
+    },
+    {
+      "triple": [
+        3,
+        84,
+        17
+      ],
+      "count": 174
+    },
+    {
+      "triple": [
+        26,
+        12,
+        61
+      ],
+      "count": 173
+    },
+    {
+      "triple": [
+        2,
+        86,
+        8
+      ],
+      "count": 173
+    },
+    {
+      "triple": [
+        41,
+        2,
+        38
+      ],
+      "count": 173
+    },
+    {
+      "triple": [
+        23,
+        36,
+        2
+      ],
+      "count": 173
+    },
+    {
+      "triple": [
+        2,
+        30,
+        70
+      ],
+      "count": 173
+    },
+    {
+      "triple": [
+        23,
+        50,
+        33
+      ],
+      "count": 172
+    },
+    {
+      "triple": [
+        45,
+        62,
+        5
+      ],
+      "count": 172
+    },
+    {
+      "triple": [
+        5,
+        82,
+        19
+      ],
+      "count": 171
+    },
+    {
+      "triple": [
+        30,
+        70,
+        7
+      ],
+      "count": 171
+    },
+    {
+      "triple": [
+        32,
+        3,
+        56
+      ],
+      "count": 170
+    },
+    {
+      "triple": [
+        35,
+        53,
+        20
+      ],
+      "count": 169
+    },
+    {
+      "triple": [
+        33,
+        50,
+        8
+      ],
+      "count": 169
+    },
+    {
+      "triple": [
+        61,
+        2,
+        65
+      ],
+      "count": 168
+    },
+    {
+      "triple": [
+        17,
+        88,
+        20
+      ],
+      "count": 168
+    }
+  ],
+  "predictable_contexts": [
+    {
+      "previous": 71,
+      "predict": 3,
+      "probability": 0.011556012620240759,
+      "samples": 558151
+    },
+    {
+      "previous": 122,
+      "predict": 1,
+      "probability": 0.011509463686899377,
+      "samples": 444330
+    },
+    {
+      "previous": 106,
+      "predict": 3,
+      "probability": 0.011491749621522874,
+      "samples": 472948
+    },
+    {
+      "previous": 62,
+      "predict": 5,
+      "probability": 0.011467826899171033,
+      "samples": 582412
+    },
+    {
+      "previous": 35,
+      "predict": 2,
+      "probability": 0.011462514519283078,
+      "samples": 680130
+    },
+    {
+      "previous": 116,
+      "predict": 1,
+      "probability": 0.011459239600887986,
+      "samples": 456313
+    },
+    {
+      "previous": 126,
+      "predict": 5,
+      "probability": 0.011447050270850473,
+      "samples": 438803
+    },
+    {
+      "previous": 123,
+      "predict": 1,
+      "probability": 0.011428829459377081,
+      "samples": 442915
+    },
+    {
+      "previous": 112,
+      "predict": 1,
+      "probability": 0.011427366282598123,
+      "samples": 464674
+    },
+    {
+      "previous": 91,
+      "predict": 2,
+      "probability": 0.011419764658522001,
+      "samples": 506753
+    },
+    {
+      "previous": 26,
+      "predict": 1,
+      "probability": 0.011412907702984039,
+      "samples": 720500
+    },
+    {
+      "previous": 79,
+      "predict": 3,
+      "probability": 0.011409421033961278,
+      "samples": 535610
+    },
+    {
+      "previous": 102,
+      "predict": 1,
+      "probability": 0.011408033476270379,
+      "samples": 482730
+    },
+    {
+      "previous": 61,
+      "predict": 2,
+      "probability": 0.011404446965477415,
+      "samples": 585298
+    },
+    {
+      "previous": 22,
+      "predict": 2,
+      "probability": 0.011399035372390178,
+      "samples": 737694
+    },
+    {
+      "previous": 103,
+      "predict": 2,
+      "probability": 0.011395715493478517,
+      "samples": 481409
+    },
+    {
+      "previous": 109,
+      "predict": 1,
+      "probability": 0.011393589161707142,
+      "samples": 469299
+    },
+    {
+      "previous": 125,
+      "predict": 2,
+      "probability": 0.011393318864903886,
+      "samples": 439117
+    },
+    {
+      "previous": 96,
+      "predict": 1,
+      "probability": 0.011390915035967604,
+      "samples": 496975
+    },
+    {
+      "previous": 31,
+      "predict": 1,
+      "probability": 0.01137643064846514,
+      "samples": 698110
+    },
+    {
+      "previous": 100,
+      "predict": 1,
+      "probability": 0.01137091968686457,
+      "samples": 488351
+    },
+    {
+      "previous": 89,
+      "predict": 3,
+      "probability": 0.011362045090320674,
+      "samples": 514168
+    },
+    {
+      "previous": 33,
+      "predict": 2,
+      "probability": 0.011361343854816307,
+      "samples": 689003
+    },
+    {
+      "previous": 59,
+      "predict": 1,
+      "probability": 0.01135610975939443,
+      "samples": 591840
+    },
+    {
+      "previous": 36,
+      "predict": 1,
+      "probability": 0.01135310199044633,
+      "samples": 677436
+    },
+    {
+      "previous": 78,
+      "predict": 2,
+      "probability": 0.011346217370810121,
+      "samples": 538858
+    },
+    {
+      "previous": 113,
+      "predict": 2,
+      "probability": 0.011333278489069393,
+      "samples": 461914
+    },
+    {
+      "previous": 121,
+      "predict": 5,
+      "probability": 0.011330089992647733,
+      "samples": 447481
+    },
+    {
+      "previous": 67,
+      "predict": 2,
+      "probability": 0.011327798272567993,
+      "samples": 567895
+    },
+    {
+      "previous": 84,
+      "predict": 5,
+      "probability": 0.01132641608832085,
+      "samples": 523908
+    },
+    {
+      "previous": 69,
+      "predict": 2,
+      "probability": 0.011326248206943992,
+      "samples": 562587
+    },
+    {
+      "previous": 101,
+      "predict": 1,
+      "probability": 0.011320957405930695,
+      "samples": 484058
+    },
+    {
+      "previous": 51,
+      "predict": 4,
+      "probability": 0.01131496155587165,
+      "samples": 620771
+    },
+    {
+      "previous": 104,
+      "predict": 1,
+      "probability": 0.01131164554477361,
+      "samples": 478887
+    },
+    {
+      "previous": 124,
+      "predict": 1,
+      "probability": 0.011310546087303277,
+      "samples": 441358
+    },
+    {
+      "previous": 99,
+      "predict": 2,
+      "probability": 0.01130811227018238,
+      "samples": 488322
+    },
+    {
+      "previous": 12,
+      "predict": 1,
+      "probability": 0.011303191489361703,
+      "samples": 794112
+    },
+    {
+      "previous": 17,
+      "predict": 1,
+      "probability": 0.011301850104521262,
+      "samples": 767308
+    },
+    {
+      "previous": 118,
+      "predict": 2,
+      "probability": 0.011299572748063183,
+      "samples": 451256
+    },
+    {
+      "previous": 41,
+      "predict": 1,
+      "probability": 0.011299314546839299,
+      "samples": 656500
+    },
+    {
+      "previous": 27,
+      "predict": 2,
+      "probability": 0.011295574281362233,
+      "samples": 715590
+    },
+    {
+      "previous": 6,
+      "predict": 3,
+      "probability": 0.011290229205764156,
+      "samples": 829124
+    },
+    {
+      "previous": 34,
+      "predict": 3,
+      "probability": 0.011288892146443361,
+      "samples": 682175
+    },
+    {
+      "previous": 81,
+      "predict": 2,
+      "probability": 0.011288160609666099,
+      "samples": 531176
+    },
+    {
+      "previous": 115,
+      "predict": 2,
+      "probability": 0.011285589137100307,
+      "samples": 456600
+    },
+    {
+      "previous": 86,
+      "predict": 2,
+      "probability": 0.011283199458344875,
+      "samples": 519888
+    },
+    {
+      "previous": 38,
+      "predict": 1,
+      "probability": 0.011282489432502922,
+      "samples": 667140
+    },
+    {
+      "previous": 44,
+      "predict": 1,
+      "probability": 0.011282167618112376,
+      "samples": 643582
+    },
+    {
+      "previous": 48,
+      "predict": 1,
+      "probability": 0.011281164870892632,
+      "samples": 631761
+    },
+    {
+      "previous": 40,
+      "predict": 5,
+      "probability": 0.011280295358458177,
+      "samples": 660621
+    },
+    {
+      "previous": 39,
+      "predict": 2,
+      "probability": 0.011275605522278949,
+      "samples": 664798
+    },
+    {
+      "previous": 95,
+      "predict": 1,
+      "probability": 0.011271645660266399,
+      "samples": 499927
+    },
+    {
+      "previous": 32,
+      "predict": 1,
+      "probability": 0.011271525332512156,
+      "samples": 694937
+    },
+    {
+      "previous": 8,
+      "predict": 2,
+      "probability": 0.011270251519474682,
+      "samples": 818704
+    },
+    {
+      "previous": 54,
+      "predict": 3,
+      "probability": 0.011261279774577127,
+      "samples": 608279
+    },
+    {
+      "previous": 90,
+      "predict": 2,
+      "probability": 0.011258778698075773,
+      "samples": 508048
+    },
+    {
+      "previous": 56,
+      "predict": 1,
+      "probability": 0.011257088455647999,
+      "samples": 603975
+    },
+    {
+      "previous": 58,
+      "predict": 1,
+      "probability": 0.011254990103659969,
+      "samples": 596180
+    },
+    {
+      "previous": 108,
+      "predict": 1,
+      "probability": 0.0112525791140584,
+      "samples": 471092
+    },
+    {
+      "previous": 13,
+      "predict": 1,
+      "probability": 0.011251298007249822,
+      "samples": 788709
+    },
+    {
+      "previous": 37,
+      "predict": 5,
+      "probability": 0.011246940849974215,
+      "samples": 670938
+    },
+    {
+      "previous": 117,
+      "predict": 2,
+      "probability": 0.011246684350132626,
+      "samples": 452400
+    },
+    {
+      "previous": 77,
+      "predict": 1,
+      "probability": 0.011245844288878782,
+      "samples": 540822
+    },
+    {
+      "previous": 7,
+      "predict": 2,
+      "probability": 0.011245303859373751,
+      "samples": 825678
+    },
+    {
+      "previous": 94,
+      "predict": 3,
+      "probability": 0.0112443359499649,
+      "samples": 501408
+    },
+    {
+      "previous": 85,
+      "predict": 1,
+      "probability": 0.011239210223882459,
+      "samples": 521211
+    },
+    {
+      "previous": 49,
+      "predict": 2,
+      "probability": 0.011236133878694318,
+      "samples": 628330
+    },
+    {
+      "previous": 11,
+      "predict": 1,
+      "probability": 0.011234635901624808,
+      "samples": 800649
+    },
+    {
+      "previous": 93,
+      "predict": 2,
+      "probability": 0.011233962865566978,
+      "samples": 501960
+    },
+    {
+      "previous": 57,
+      "predict": 3,
+      "probability": 0.011233860686813278,
+      "samples": 600862
+    },
+    {
+      "previous": 4,
+      "predict": 3,
+      "probability": 0.011233329696032338,
+      "samples": 843116
+    },
+    {
+      "previous": 92,
+      "predict": 1,
+      "probability": 0.01122908036782119,
+      "samples": 505028
+    },
+    {
+      "previous": 119,
+      "predict": 1,
+      "probability": 0.011226661936227771,
+      "samples": 450980
+    },
+    {
+      "previous": 63,
+      "predict": 1,
+      "probability": 0.011223253797289764,
+      "samples": 581204
+    },
+    {
+      "previous": 105,
+      "predict": 3,
+      "probability": 0.011212761360132079,
+      "samples": 476689
+    },
+    {
+      "previous": 114,
+      "predict": 2,
+      "probability": 0.011198279134505884,
+      "samples": 458374
+    },
+    {
+      "previous": 0,
+      "predict": 1,
+      "probability": 0.01119747818398493,
+      "samples": 650325
+    },
+    {
+      "previous": 65,
+      "predict": 3,
+      "probability": 0.011195892462383228,
+      "samples": 574943
+    },
+    {
+      "previous": 75,
+      "predict": 4,
+      "probability": 0.011191789148376798,
+      "samples": 546204
+    },
+    {
+      "previous": 5,
+      "predict": 2,
+      "probability": 0.011190733756880651,
+      "samples": 836585
+    },
+    {
+      "previous": 110,
+      "predict": 1,
+      "probability": 0.011190033922796248,
+      "samples": 467827
+    },
+    {
+      "previous": 120,
+      "predict": 1,
+      "probability": 0.011187655492374889,
+      "samples": 448977
+    },
+    {
+      "previous": 70,
+      "predict": 7,
+      "probability": 0.011180597407288849,
+      "samples": 559183
+    },
+    {
+      "previous": 29,
+      "predict": 1,
+      "probability": 0.011177930737610324,
+      "samples": 706213
+    },
+    {
+      "previous": 74,
+      "predict": 2,
+      "probability": 0.01117785484270498,
+      "samples": 549032
+    },
+    {
+      "previous": 111,
+      "predict": 3,
+      "probability": 0.011177705554291406,
+      "samples": 465838
+    },
+    {
+      "previous": 23,
+      "predict": 1,
+      "probability": 0.011177663216652782,
+      "samples": 733427
+    },
+    {
+      "previous": 127,
+      "predict": 2,
+      "probability": 0.011176433317040498,
+      "samples": 441912
+    },
+    {
+      "previous": 80,
+      "predict": 1,
+      "probability": 0.011175351630949145,
+      "samples": 533585
+    },
+    {
+      "previous": 76,
+      "predict": 1,
+      "probability": 0.011172057016015115,
+      "samples": 545110
+    },
+    {
+      "previous": 97,
+      "predict": 2,
+      "probability": 0.011166346132411383,
+      "samples": 493447
+    },
+    {
+      "previous": 45,
+      "predict": 4,
+      "probability": 0.01116608415414643,
+      "samples": 638899
+    },
+    {
+      "previous": 72,
+      "predict": 1,
+      "probability": 0.011162857605236186,
+      "samples": 556130
+    },
+    {
+      "previous": 24,
+      "predict": 1,
+      "probability": 0.011159213930430154,
+      "samples": 728994
+    },
+    {
+      "previous": 2,
+      "predict": 1,
+      "probability": 0.011156758781324251,
+      "samples": 854370
+    },
+    {
+      "previous": 30,
+      "predict": 1,
+      "probability": 0.011156101508576858,
+      "samples": 703113
+    },
+    {
+      "previous": 18,
+      "predict": 1,
+      "probability": 0.011154506533616564,
+      "samples": 761217
+    },
+    {
+      "previous": 88,
+      "predict": 1,
+      "probability": 0.011150211922074892,
+      "samples": 514340
+    },
+    {
+      "previous": 10,
+      "predict": 1,
+      "probability": 0.01114977638262202,
+      "samples": 804052
+    },
+    {
+      "previous": 16,
+      "predict": 3,
+      "probability": 0.01114629282892498,
+      "samples": 772813
+    }
+  ]
+}

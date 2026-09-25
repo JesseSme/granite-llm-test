@@ -1,0 +1,3 @@
+[submodule "systemverilog_fp_unit"]
+	path = systemverilog_fp_unit
+	url = git@github.com:JesseSme/systemverilog_fp_unit.git

@@ -1,0 +1,79 @@
+[
+  {
+    "coefficients": 8,
+    "bytes_per_token": 16,
+    "compressed_mib": 1.53125,
+    "compression_ratio": 96.0,
+    "mse": 0.0007344263490147707,
+    "rmse": 0.027100301640660213,
+    "mae": 0.021503893918344102,
+    "max_error": 0.2391398841879413,
+    "exact_bf16_fraction": 0.0001856226499388818
+  },
+  {
+    "coefficients": 16,
+    "bytes_per_token": 32,
+    "compressed_mib": 3.0625,
+    "compression_ratio": 48.0,
+    "mse": 0.0007267150372490969,
+    "rmse": 0.026957652665784846,
+    "mae": 0.021390908911690626,
+    "max_error": 0.2377555923874989,
+    "exact_bf16_fraction": 0.00026400559613493833
+  },
+  {
+    "coefficients": 32,
+    "bytes_per_token": 64,
+    "compressed_mib": 6.125,
+    "compression_ratio": 24.0,
+    "mse": 0.0007118876396613212,
+    "rmse": 0.026681222604320837,
+    "mae": 0.021169349499613358,
+    "max_error": 0.23269915894716564,
+    "exact_bf16_fraction": 0.0003718421572730655
+  },
+  {
+    "coefficients": 64,
+    "bytes_per_token": 128,
+    "compressed_mib": 12.25,
+    "compression_ratio": 12.0,
+    "mse": 0.0006801242994483696,
+    "rmse": 0.026079192845032025,
+    "mae": 0.020685685531901414,
+    "max_error": 0.22395897615974578,
+    "exact_bf16_fraction": 0.0005352513319781038
+  },
+  {
+    "coefficients": 128,
+    "bytes_per_token": 256,
+    "compressed_mib": 24.5,
+    "compression_ratio": 6.0,
+    "mse": 0.0006182773831012772,
+    "rmse": 0.024865184155788537,
+    "mae": 0.019715246866797695,
+    "max_error": 0.2198882814624667,
+    "exact_bf16_fraction": 0.0008026045195910395
+  },
+  {
+    "coefficients": 256,
+    "bytes_per_token": 512,
+    "compressed_mib": 49.0,
+    "compression_ratio": 3.0,
+    "mse": 0.0004940788282222384,
+    "rmse": 0.022227884024851274,
+    "mae": 0.017611186925578438,
+    "max_error": 0.19875520440953529,
+    "exact_bf16_fraction": 0.001280090435832536
+  },
+  {
+    "coefficients": 384,
+    "bytes_per_token": 768,
+    "compressed_mib": 73.5,
+    "compression_ratio": 2.0,
+    "mse": 0.00037193887382044655,
+    "rmse": 0.01928571683449818,
+    "mae": 0.015268229322124014,
+    "max_error": 0.15630639668178462,
+    "exact_bf16_fraction": 0.0018053638691804847
+  }
+]

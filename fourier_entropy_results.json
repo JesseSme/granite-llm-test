@@ -1,0 +1,288 @@
+{
+  "model": "/home/jese/tinyllm/granite-4.0-h-350m/model.safetensors",
+  "embedding_key": "model.embed_tokens.weight",
+  "embedding_shape": [
+    100352,
+    768
+  ],
+  "tokens_tested": 100352,
+  "chunk_size": 2048,
+  "original_bf16_entropy_bits_per_value": 10.475373796437006,
+  "results": {
+    "2": {
+      "blocks_per_token": 384,
+      "original": {},
+      "fourier": {
+        "real": {
+          "sample_values": 2000000,
+          "histogram_entropy_bits": 10.214365005493164,
+          "minimum": -0.28857421875,
+          "maximum": 0.239013671875
+        },
+        "imag": {
+          "sample_values": 2000000,
+          "histogram_entropy_bits": 0.0,
+          "minimum": 0.0,
+          "maximum": 0.0
+        }
+      },
+      "quantization": {
+        "4": {
+          "bits_per_scalar": 4,
+          "rmse": 0.008800957351922989,
+          "mae": 0.007995606400072575
+        },
+        "6": {
+          "bits_per_scalar": 6,
+          "rmse": 0.003211523639038205,
+          "mae": 0.00296955113299191
+        },
+        "8": {
+          "bits_per_scalar": 8,
+          "rmse": 0.0008158718701452017,
+          "mae": 0.000752307299990207
+        },
+        "10": {
+          "bits_per_scalar": 10,
+          "rmse": 0.00019518143380992115,
+          "mae": 0.00018068669305648655
+        },
+        "12": {
+          "bits_per_scalar": 12,
+          "rmse": 3.016216396645177e-05,
+          "mae": 2.6546600565779954e-05
+        },
+        "14": {
+          "bits_per_scalar": 14,
+          "rmse": 6.5770273067755625e-06,
+          "mae": 4.130877641728148e-06
+        },
+        "16": {
+          "bits_per_scalar": 16,
+          "rmse": 2.739599722190178e-06,
+          "mae": 2.5566496333340183e-06
+        }
+      }
+    },
+    "4": {
+      "blocks_per_token": 192,
+      "original": {},
+      "fourier": {
+        "real": {
+          "sample_values": 2000000,
+          "histogram_entropy_bits": 10.451967239379883,
+          "minimum": -0.2947998046875,
+          "maximum": 0.28857421875
+        },
+        "imag": {
+          "sample_values": 2000000,
+          "histogram_entropy_bits": 4.416493892669678,
+          "minimum": -0.18994140625,
+          "maximum": 0.2276611328125
+        }
+      },
+      "quantization": {
+        "4": {
+          "bits_per_scalar": 4,
+          "rmse": 0.013158648274838924,
+          "mae": 0.011936014518141747
+        },
+        "6": {
+          "bits_per_scalar": 6,
+          "rmse": 0.002352782990783453,
+          "mae": 0.002049956237897277
+        },
+        "8": {
+          "bits_per_scalar": 8,
+          "rmse": 0.0005694844876416028,
+          "mae": 0.00048730807611718774
+        },
+        "10": {
+          "bits_per_scalar": 10,
+          "rmse": 0.0001350605016341433,
+          "mae": 0.00010287536861142144
+        },
+        "12": {
+          "bits_per_scalar": 12,
+          "rmse": 4.4253425585338846e-05,
+          "mae": 4.038651240989566e-05
+        },
+        "14": {
+          "bits_per_scalar": 14,
+          "rmse": 8.565238204027992e-06,
+          "mae": 6.911264335940359e-06
+        },
+        "16": {
+          "bits_per_scalar": 16,
+          "rmse": 2.309909405084909e-06,
+          "mae": 2.0409736407600576e-06
+        }
+      }
+    },
+    "8": {
+      "blocks_per_token": 96,
+      "original": {},
+      "fourier": {
+        "real": {
+          "sample_values": 2000000,
+          "histogram_entropy_bits": 10.438164710998535,
+          "minimum": -0.4154052734375,
+          "maximum": 0.35296630859375
+        },
+        "imag": {
+          "sample_values": 2000000,
+          "histogram_entropy_bits": 7.2809343338012695,
+          "minimum": -0.24700355529785156,
+          "maximum": 0.3633078336715698
+        }
+      },
+      "quantization": {
+        "4": {
+          "bits_per_scalar": 4,
+          "rmse": 0.013393845409154892,
+          "mae": 0.01039120927453041
+        },
+        "6": {
+          "bits_per_scalar": 6,
+          "rmse": 0.0038591891061514616,
+          "mae": 0.003442279761657119
+        },
+        "8": {
+          "bits_per_scalar": 8,
+          "rmse": 0.000789367884863168,
+          "mae": 0.0006288433214649558
+        },
+        "10": {
+          "bits_per_scalar": 10,
+          "rmse": 0.00021832910715602338,
+          "mae": 0.00019476890156511217
+        },
+        "12": {
+          "bits_per_scalar": 12,
+          "rmse": 6.391984788933769e-05,
+          "mae": 5.6322718592127785e-05
+        },
+        "14": {
+          "bits_per_scalar": 14,
+          "rmse": 1.5851834177738056e-05,
+          "mae": 1.3992733329359908e-05
+        },
+        "16": {
+          "bits_per_scalar": 16,
+          "rmse": 3.4355039133515675e-06,
+          "mae": 3.0675673770019785e-06
+        }
+      }
+    },
+    "16": {
+      "blocks_per_token": 48,
+      "original": {},
+      "fourier": {
+        "real": {
+          "sample_values": 2000000,
+          "histogram_entropy_bits": 10.370325088500977,
+          "minimum": -0.508392333984375,
+          "maximum": 0.55950927734375
+        },
+        "imag": {
+          "sample_values": 2000000,
+          "histogram_entropy_bits": 9.000551223754883,
+          "minimum": -0.4072856903076172,
+          "maximum": 0.41217041015625
+        }
+      },
+      "quantization": {
+        "4": {
+          "bits_per_scalar": 4,
+          "rmse": 0.01965031959116459,
+          "mae": 0.016924118623137474
+        },
+        "6": {
+          "bits_per_scalar": 6,
+          "rmse": 0.004615345504134893,
+          "mae": 0.0037831428926438093
+        },
+        "8": {
+          "bits_per_scalar": 8,
+          "rmse": 0.0012678500497713685,
+          "mae": 0.0011158115230500698
+        },
+        "10": {
+          "bits_per_scalar": 10,
+          "rmse": 0.0002842821413651109,
+          "mae": 0.0002339684433536604
+        },
+        "12": {
+          "bits_per_scalar": 12,
+          "rmse": 8.289134711958468e-05,
+          "mae": 7.221412670332938e-05
+        },
+        "14": {
+          "bits_per_scalar": 14,
+          "rmse": 1.9750539649976417e-05,
+          "mae": 1.73788739630254e-05
+        },
+        "16": {
+          "bits_per_scalar": 16,
+          "rmse": 4.438192718225764e-06,
+          "mae": 3.668506906251423e-06
+        }
+      }
+    },
+    "32": {
+      "blocks_per_token": 24,
+      "original": {},
+      "fourier": {
+        "real": {
+          "sample_values": 2000000,
+          "histogram_entropy_bits": 10.294391632080078,
+          "minimum": -0.819091796875,
+          "maximum": 0.7016220092773438
+        },
+        "imag": {
+          "sample_values": 2000000,
+          "histogram_entropy_bits": 9.841791152954102,
+          "minimum": -0.589306116104126,
+          "maximum": 0.5988550186157227
+        }
+      },
+      "quantization": {
+        "4": {
+          "bits_per_scalar": 4,
+          "rmse": 0.028451981022953987,
+          "mae": 0.024319728836417198
+        },
+        "6": {
+          "bits_per_scalar": 6,
+          "rmse": 0.0067724017426371574,
+          "mae": 0.00577568681910634
+        },
+        "8": {
+          "bits_per_scalar": 8,
+          "rmse": 0.0017443160759285092,
+          "mae": 0.001525188679806888
+        },
+        "10": {
+          "bits_per_scalar": 10,
+          "rmse": 0.00041623582364991307,
+          "mae": 0.0003507046203594655
+        },
+        "12": {
+          "bits_per_scalar": 12,
+          "rmse": 0.00010836695582838729,
+          "mae": 9.475714614382014e-05
+        },
+        "14": {
+          "bits_per_scalar": 14,
+          "rmse": 2.6659818104235455e-05,
+          "mae": 2.3277849322766997e-05
+        },
+        "16": {
+          "bits_per_scalar": 16,
+          "rmse": 6.7528008003137074e-06,
+          "mae": 5.905401849304326e-06
+        }
+      }
+    }
+  }
+}
