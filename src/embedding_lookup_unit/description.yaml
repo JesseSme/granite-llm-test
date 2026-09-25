@@ -1,3 +1,4 @@
+status: verified: unit + in-loop 16896/16896 bit-exact; formal PASS
 #Description
 
 llm_guidance: 

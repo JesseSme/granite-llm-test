@@ -1,3 +1,4 @@
+status: verified: unit + in-loop (max abs 4.5e-8); formal depth 140 PASS
 #Description
 
 llm_guidance: 

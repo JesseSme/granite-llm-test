@@ -1,0 +1,7 @@
+status: spec only; implementation is the external systemverilog_fp_unit library (parameterized W_EXP/W_MANT)
+#Description
+
+name: floating_point_unit
+description: An IEEE 754-2019 accurate floating_point_unit.
+
+location: ../../systemverilog_fp_unit

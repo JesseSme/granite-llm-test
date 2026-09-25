@@ -1,3 +1,4 @@
+status: verified: single-token single-layer in-loop PASS (max abs 0.0078); end-to-end hybrid (1 RTL layer + 31 software layers) PASS with same argmax/top-5
 name: granite_layer
 description: >
   One Granite 4.0-H-350M decoder layer (mamba type) for a single token:
