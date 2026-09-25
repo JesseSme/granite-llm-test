@@ -54,13 +54,15 @@ module fp_softplus_seq (
   /* verilator lint_off UNUSEDSIGNAL */
   logic [1:0]        mul_cmp;
   logic [4:0]        mul_flags;
+  logic              unused_out_valid_mul;
   /* verilator lint_on UNUSEDSIGNAL */
 
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_mul (
     .clk(clk), .rst_n(rst_n),
     .mode(mul_mode), .rm(mul_rm),
     .a(mul_a), .b(mul_b), .c('0),
-    .y(mul_y), .cmp(mul_cmp), .flags(mul_flags)
+    .y(mul_y), .cmp(mul_cmp), .flags(mul_flags),
+    .in_valid(1'b1), .out_valid(unused_out_valid_mul)
   );
 
   // ------------------------------------------------------- ADD
@@ -70,13 +72,15 @@ module fp_softplus_seq (
   /* verilator lint_off UNUSEDSIGNAL */
   logic [1:0]        add_cmp;
   logic [4:0]        add_flags;
+  logic              unused_out_valid_add;
   /* verilator lint_on UNUSEDSIGNAL */
 
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_add (
     .clk(clk), .rst_n(rst_n),
     .mode(add_mode), .rm(add_rm),
     .a(add_a), .b(add_b), .c('0),
-    .y(add_y), .cmp(add_cmp), .flags(add_flags)
+    .y(add_y), .cmp(add_cmp), .flags(add_flags),
+    .in_valid(1'b1), .out_valid(unused_out_valid_add)
   );
 
   // ------------------------------------------------------- DIV
@@ -86,13 +90,15 @@ module fp_softplus_seq (
   /* verilator lint_off UNUSEDSIGNAL */
   logic [1:0]        div_cmp;
   logic [4:0]        div_flags;
+  logic              unused_out_valid_div;
   /* verilator lint_on UNUSEDSIGNAL */
 
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_div (
     .clk(clk), .rst_n(rst_n),
     .mode(div_mode), .rm(div_rm),
     .a(div_a), .b(div_b), .c('0),
-    .y(div_y), .cmp(div_cmp), .flags(div_flags)
+    .y(div_y), .cmp(div_cmp), .flags(div_flags),
+    .in_valid(1'b1), .out_valid(unused_out_valid_div)
   );
 
   assign mul_mode = fp_pkg::OP_MUL;

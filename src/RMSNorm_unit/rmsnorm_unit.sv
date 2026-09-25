@@ -74,6 +74,9 @@ module rmsnorm_unit #(
   logic [31:0]   fpu_y;
   logic [1:0]          fpu_cmp;
   logic [4:0]          fpu_flags;
+  /* verilator lint_off UNUSEDSIGNAL */
+  logic                unused_out_valid_fp;
+  /* verilator lint_on UNUSEDSIGNAL */
 
   function automatic logic [31:0] bf16_to_fp32(input logic [W_DATA-1:0] v);
     bf16_to_fp32 = {v, 16'h0};
@@ -86,7 +89,8 @@ module rmsnorm_unit #(
     .clk(clk), .rst_n(rst_n),
     .mode(fpu_mode), .rm(fpu_rm),
     .a(fpu_a), .b(fpu_b), .c(fpu_c),
-    .y(fpu_y), .cmp(fpu_cmp), .flags(fpu_flags)
+    .y(fpu_y), .cmp(fpu_cmp), .flags(fpu_flags),
+    .in_valid(1'b1), .out_valid(unused_out_valid_fp)
   );
 
   // -------------------------------------------------- pipeline tracking

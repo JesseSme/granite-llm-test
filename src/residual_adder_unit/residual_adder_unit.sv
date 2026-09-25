@@ -59,13 +59,15 @@ module residual_adder_unit #(
   /* verilator lint_off UNUSEDSIGNAL */
   logic [1:0]        mul_cmp;
   logic [4:0]        mul_flags;
+  logic              unused_out_valid_mul;
   /* verilator lint_on UNUSEDSIGNAL */
 
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_fp_mul (
     .clk(clk), .rst_n(rst_n),
     .mode(mul_mode), .rm(mul_rm),
     .a(mul_a), .b(mul_b), .c('0),
-    .y(mul_y), .cmp(mul_cmp), .flags(mul_flags)
+    .y(mul_y), .cmp(mul_cmp), .flags(mul_flags),
+    .in_valid(1'b1), .out_valid(unused_out_valid_mul)
   );
 
   // ------------------------------------------------------------ FPU: ADD
@@ -75,13 +77,15 @@ module residual_adder_unit #(
   /* verilator lint_off UNUSEDSIGNAL */
   logic [1:0]        add_cmp;
   logic [4:0]        add_flags;
+  logic              unused_out_valid_add;
   /* verilator lint_on UNUSEDSIGNAL */
 
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_fp_add (
     .clk(clk), .rst_n(rst_n),
     .mode(add_mode), .rm(add_rm),
     .a(add_a), .b(add_b), .c('0),
-    .y(add_y), .cmp(add_cmp), .flags(add_flags)
+    .y(add_y), .cmp(add_cmp), .flags(add_flags),
+    .in_valid(1'b1), .out_valid(unused_out_valid_add)
   );
 
   // ------------------------------------------------------------ datapath

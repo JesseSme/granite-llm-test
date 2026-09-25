@@ -46,32 +46,40 @@ module attn_softmax_seq #(
 
   // ------------------------------------------------------- units
   /* verilator lint_off PINCONNECTEMPTY */
+  /* verilator lint_off UNUSEDSIGNAL */
+  logic unused_out_valid_max, unused_out_valid_sub;
+  logic unused_out_valid_add, unused_out_valid_div;
+  /* verilator lint_on UNUSEDSIGNAL */
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_max (
     .clk(clk), .rst_n(rst_n),
     .mode(fp_pkg::OP_MAX), .rm(fp_pkg::RM_RNE),
     .a(max_a), .b(max_b), .c('0),
-    .y(max_y), .cmp(/*unused*/), .flags(/*unused*/)
+    .y(max_y), .cmp(/*unused*/), .flags(/*unused*/),
+    .in_valid(1'b1), .out_valid(unused_out_valid_max)
   );
 
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_sub (
     .clk(clk), .rst_n(rst_n),
     .mode(fp_pkg::OP_SUB), .rm(fp_pkg::RM_RNE),
     .a(sub_a), .b(sub_b), .c('0),
-    .y(sub_y), .cmp(/*unused*/), .flags(/*unused*/)
+    .y(sub_y), .cmp(/*unused*/), .flags(/*unused*/),
+    .in_valid(1'b1), .out_valid(unused_out_valid_sub)
   );
 
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_add (
     .clk(clk), .rst_n(rst_n),
     .mode(fp_pkg::OP_ADD), .rm(fp_pkg::RM_RNE),
     .a(add_a), .b(add_b), .c('0),
-    .y(add_y), .cmp(/*unused*/), .flags(/*unused*/)
+    .y(add_y), .cmp(/*unused*/), .flags(/*unused*/),
+    .in_valid(1'b1), .out_valid(unused_out_valid_add)
   );
 
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_div (
     .clk(clk), .rst_n(rst_n),
     .mode(fp_pkg::OP_DIV), .rm(fp_pkg::RM_RNE),
     .a(div_a), .b(div_b), .c('0),
-    .y(div_y), .cmp(/*unused*/), .flags(/*unused*/)
+    .y(div_y), .cmp(/*unused*/), .flags(/*unused*/),
+    .in_valid(1'b1), .out_valid(unused_out_valid_div)
   );
   /* verilator lint_on PINCONNECTEMPTY */
 

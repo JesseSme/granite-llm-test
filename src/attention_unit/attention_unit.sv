@@ -166,18 +166,23 @@ module attention_unit #(
 
   // ------------------------------------------------------------ score FPUs
   /* verilator lint_off PINCONNECTEMPTY */
+  /* verilator lint_off UNUSEDSIGNAL */
+  logic unused_out_valid_mul, unused_out_valid_add;
+  /* verilator lint_on UNUSEDSIGNAL */
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_mul (
     .clk(clk), .rst_n(rst_n),
     .mode(fp_pkg::OP_MUL), .rm(fp_pkg::RM_RNE),
     .a(mul_a), .b(mul_b), .c('0),
-    .y(mul_y), .cmp(/*unused*/), .flags(/*unused*/)
+    .y(mul_y), .cmp(/*unused*/), .flags(/*unused*/),
+    .in_valid(1'b1), .out_valid(unused_out_valid_mul)
   );
 
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_add (
     .clk(clk), .rst_n(rst_n),
     .mode(fp_pkg::OP_ADD), .rm(fp_pkg::RM_RNE),
     .a(add_a), .b(add_b), .c('0),
-    .y(add_y), .cmp(/*unused*/), .flags(/*unused*/)
+    .y(add_y), .cmp(/*unused*/), .flags(/*unused*/),
+    .in_valid(1'b1), .out_valid(unused_out_valid_add)
   );
   /* verilator lint_on PINCONNECTEMPTY */
 

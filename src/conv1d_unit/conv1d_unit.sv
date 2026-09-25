@@ -107,18 +107,22 @@ module conv1d_unit #(
   /* verilator lint_off UNUSEDSIGNAL */
   logic [1:0]  fpu_cmp;
   logic [4:0]  fpu_flags;
+  logic        unused_out_valid_fpu;
+  /* verilator lint_on UNUSEDSIGNAL */
 
   fp_unit #(.W_EXP(W_EXP), .W_MANT(W_MANT32)) u_fpu (
-    .clk   (clk),
-    .rst_n (rst_n),
-    .mode  (fpu_mode),
-    .rm    (fpu_rm),
-    .a     (fpu_a),
-    .b     (fpu_b),
-    .c     (fpu_c),
-    .y     (fpu_y),
-    .cmp   (fpu_cmp),
-    .flags (fpu_flags)
+    .clk      (clk),
+    .rst_n    (rst_n),
+    .in_valid (1'b1),
+    .mode     (fpu_mode),
+    .rm       (fpu_rm),
+    .a        (fpu_a),
+    .b        (fpu_b),
+    .c        (fpu_c),
+    .y        (fpu_y),
+    .cmp      (fpu_cmp),
+    .flags    (fpu_flags),
+    .out_valid(unused_out_valid_fpu)
   );
 
   // ----------------------------------------------------------------
