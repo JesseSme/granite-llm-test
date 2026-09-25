@@ -38,6 +38,8 @@ INLOOP_CONFIGS = [
 ]
 
 UNIT_CONFIG = (32, 16, "tb_matrix_unit", "sim_build")
+LANES4_CONFIG = (32, 16, "tb_matrix_unit", "sim_build_l4", 4, "golden")
+TAIL_CONFIG = (32, 6, "tb_matrix_unit", "sim_build_tail", 4, "golden_tail")
 
 
 def _sim_env() -> dict:
@@ -92,14 +94,15 @@ def _run_attempt(bin_path: Path, env: dict, timeout: int, test_module: str,
 
 def run_config(IN: int, OUT: int, test_module: str, build_subdir: str,
                env: dict, timeout: int, module_path: str | None = None,
+               lanes: int = 1, golden: str = "golden",
                show: bool = True) -> bool:
     build_dir = ROOT / build_subdir
-    print(f"=== Building matrix_unit IN={IN} OUT={OUT} -> {build_subdir} ===", flush=True)
+    print(f"=== Building matrix_unit IN={IN} OUT={OUT} LANES={lanes} -> {build_subdir} ===", flush=True)
     runner = get_runner("verilator")
     runner.build(
         sources=RTL_SRCS,
         hdl_toplevel="matrix_unit",
-        parameters={"IN_FEATURES": IN, "OUT_FEATURES": OUT},
+        parameters={"IN_FEATURES": IN, "OUT_FEATURES": OUT, "LANES": lanes},
         build_args=["--timing"],
         timescale=("1ns", "1ps"),
         build_dir=build_dir,
@@ -112,6 +115,8 @@ def run_config(IN: int, OUT: int, test_module: str, build_subdir: str,
     run_env = dict(env)
     run_env["MATRIX_IN"] = str(IN)
     run_env["MATRIX_OUT"] = str(OUT)
+    run_env["MATRIX_LANES"] = str(lanes)
+    run_env["MATRIX_GOLDEN"] = golden
     if module_path is not None:
         run_env["MATRIX_MODULE"] = module_path
 
@@ -154,6 +159,16 @@ def main() -> int:
             ok &= run_config(IN, OUT, "tb_matrix_unit_inloop", subdir, env,
                              timeout=2400, module_path=module_path)
         print("matrix unit in-loop PASSED" if ok else "matrix unit in-loop FAILED",
+              flush=True)
+        return 0 if ok else 1
+
+    if mode in ("lanes4", "tail", "lanes"):
+        ok = True
+        if mode in ("lanes4", "lanes"):
+            ok &= run_config(*LANES4_CONFIG, env=env, timeout=600)
+        if mode in ("tail", "lanes"):
+            ok &= run_config(*TAIL_CONFIG, env=env, timeout=600)
+        print(f"matrix unit {mode} PASSED" if ok else f"matrix unit {mode} FAILED",
               flush=True)
         return 0 if ok else 1
 

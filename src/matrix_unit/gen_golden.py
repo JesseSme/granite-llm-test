@@ -34,6 +34,8 @@ def main():
     ap.add_argument("--in", dest="IN", type=int, default=32)
     ap.add_argument("--out", dest="OUT", type=int, default=16)
     ap.add_argument("--vectors", type=int, default=8)
+    ap.add_argument("--prefix", default="golden",
+                    help="output file prefix (e.g. golden -> golden_inputs.hex)")
     args = ap.parse_args()
 
     out_dir = Path(__file__).parent
@@ -44,21 +46,21 @@ def main():
     b = torch.randn(args.OUT, dtype=torch.bfloat16)
     y = reference(x, W, b)
 
-    with open(out_dir / "golden_inputs.hex", "w") as f:
+    with open(out_dir / f"{args.prefix}_inputs.hex", "w") as f:
         for v in range(args.vectors):
             for i in range(args.IN):
                 f.write(f"{bf16_hex(x[v, i])}\n")
 
-    with open(out_dir / "golden_weights.hex", "w") as f:
+    with open(out_dir / f"{args.prefix}_weights.hex", "w") as f:
         for o in range(args.OUT):
             for i in range(args.IN):
                 f.write(f"{bf16_hex(W[o, i])}\n")
 
-    with open(out_dir / "golden_biases.hex", "w") as f:
+    with open(out_dir / f"{args.prefix}_biases.hex", "w") as f:
         for o in range(args.OUT):
             f.write(f"{bf16_hex(b[o])}\n")
 
-    with open(out_dir / "golden_outputs.hex", "w") as f:
+    with open(out_dir / f"{args.prefix}_outputs.hex", "w") as f:
         for v in range(args.vectors):
             for o in range(args.OUT):
                 f.write(f"{bf16_hex(y[v, o])}\n")

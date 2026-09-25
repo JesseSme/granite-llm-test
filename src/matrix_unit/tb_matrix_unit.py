@@ -15,6 +15,17 @@ from cocotb.triggers import ClockCycles, RisingEdge, Timer
 
 IN = int(os.environ.get("MATRIX_IN", "32"))
 OUT = int(os.environ.get("MATRIX_OUT", "16"))
+GOLDEN = os.environ.get("MATRIX_GOLDEN", "golden")
+
+BUSY_CYCLES = 0
+
+
+async def _count_busy(dut):
+    global BUSY_CYCLES
+    while True:
+        await RisingEdge(dut.clk)
+        if int(dut.busy.value) == 1:
+            BUSY_CYCLES += 1
 
 
 def read_hex(path):
@@ -42,13 +53,14 @@ async def reset_dut(dut):
 async def test_matrix_unit(dut):
     clock = Clock(dut.clk, 10, unit="ns")
     cocotb.start_soon(clock.start())
+    cocotb.start_soon(_count_busy(dut))
     await reset_dut(dut)
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    inputs = read_hex(os.path.join(script_dir, "golden_inputs.hex"))
-    weights = read_hex(os.path.join(script_dir, "golden_weights.hex"))
-    biases = read_hex(os.path.join(script_dir, "golden_biases.hex"))
-    expected = read_hex(os.path.join(script_dir, "golden_outputs.hex"))
+    inputs = read_hex(os.path.join(script_dir, f"{GOLDEN}_inputs.hex"))
+    weights = read_hex(os.path.join(script_dir, f"{GOLDEN}_weights.hex"))
+    biases = read_hex(os.path.join(script_dir, f"{GOLDEN}_biases.hex"))
+    expected = read_hex(os.path.join(script_dir, f"{GOLDEN}_outputs.hex"))
     n_vectors = len(inputs) // IN
 
     dut._log.info(f"Loading {OUT}x{IN} weights ...")
@@ -130,6 +142,7 @@ async def test_matrix_unit(dut):
             await RisingEdge(dut.clk)
 
     dut._log.info(f"Results: {total - mismatches}/{total} passed")
+    dut._log.info(f"Busy cycles (total, incl. weight load): {BUSY_CYCLES}")
     if mismatches > 0:
         dut._log.error(f"FAILED: {mismatches} mismatches")
         assert False, f"{mismatches} mismatches"

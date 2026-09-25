@@ -70,3 +70,12 @@ skipping the 0+p0 seed (differs for -0).
 2. P1 with L=4 (biggest throughput win; dimensions all divide by 4)
 3. P2 (pipeline the adder + interleave P contexts) once P1/P3 are stable
 4. P4 inside the fp submodule, with the library's exhaustive suites re-run
+
+### Progress
+
+- [x] P3 registered multiplier operands (MAC_FILL) — +1 cycle per output row,
+      arithmetic schedule unchanged. Evidence: lint clean; unit 128/128
+      bit-exact; in-loop q_proj 6144/6144 and k_proj 2048/2048 bit-exact
+      (max abs 0.0); formal/bmc.sby depth 40 PASS. Busy-cycle count for the
+      32x16 unit test (8 vectors): 4627 cycles (576/vector compute + stalls).
+- [ ] P1 LANES parallel output lanes

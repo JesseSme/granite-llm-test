@@ -114,22 +114,27 @@ max_clock_speed: 200 MHz (estimated; binary32 fp_unit MUL/ADD path with the
 
 characteristics:
   latency: >
-    Per output row: OUT_FEATURES x (IN_FEATURES + 3) cycles plus input beats and
-    handshake stalls (IN_FEATURES MAC cycles, final product add, bias add, output).
-    For 768->768: ~592k cycles per vector.
+    Per output row: OUT_FEATURES x (IN_FEATURES + 4) cycles plus input beats and
+    handshake stalls (MAC_FILL operand load, IN_FEATURES MAC cycles, final
+    product add, bias add, output). For 768->768: ~593k cycles per vector.
   throughput: 1 multiply-accumulate per cycle (accumulator held in the fp32 adder's
     output register; no stalls between MACs)
   resource_usage: >
     Parameterized (OUT_FEATURES x IN_FEATURES) x 16-bit weight RAM,
     OUT_FEATURES x 16-bit bias RAM, IN_FEATURES x 16-bit input buffer,
-    2 binary32 fp_unit instances (MUL + ADD) and one fp32_to_bf16_round unit.
+    2 binary32 fp_unit instances (MUL + ADD) and one fp32_to_bf16_round unit,
+    plus registered multiplier operands (mul_a_q/mul_b_q) between the weight
+    memory and the multiplier.
   notes: >
     AXI-Stream contract: the input vector is IN_FEATURES beats with tlast on the
     final beat (the counter bound also ends streams that omit tlast); the output
     vector is OUT_FEATURES beats with tlast on the final beat and is held stable
     under downstream backpressure. Weights must be loaded before streaming.
-    The output data is combinational from the fp32 accumulator through the
-    rounding stage, with registered tvalid.
+    The multiplier operands are registered: MAC_FILL loads element 0 and each
+    MAC cycle prefetches element i+1, so the MUL output during MAC(i) is still
+    the product of element i-1 and the sequential accumulation order is
+    unchanged. The output data is combinational from the fp32 accumulator
+    through the rounding stage, with registered tvalid.
   unit_verification: >
     tb_matrix_unit.py: 32x16 synthetic configuration, 8 vectors, random input
     bubbles and randomized output stalls — 128/128 outputs bit-exact vs the
@@ -157,4 +162,5 @@ optimization:
     plus P interleaved accumulator contexts; P4 balanced leading-one detectors.
   out_of_scope: any reassociation, fp_fma fusion, wide exact accumulator, or
     removing the 0+p0 seed (all change results).
-  status: investigation complete; implementation not started.
+  status: P3 (registered multiplier operands) implemented and verified;
+    P1 (LANES parallel output lanes) next.

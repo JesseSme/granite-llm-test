@@ -76,9 +76,14 @@ module matrix_unit #(
   end
 
   // ------------------------------------------------------------ FPU: MUL
+  // The multiplier operands are registered (mul_a_q/mul_b_q) so the weight
+  // and input memory read is off the multiplier input path. MAC_FILL loads
+  // element i_cnt; during MAC(i) the MUL output is still the product of
+  // element i-1, exactly as before (the add schedule is unchanged).
   fp_pkg::op_t       mul_mode;
   fp_pkg::rounding_t mul_rm;
   logic [31:0]       mul_a, mul_b, mul_y;
+  logic [31:0]       mul_a_q, mul_b_q;
   /* verilator lint_off UNUSEDSIGNAL */
   logic [1:0]        mul_cmp;
   logic [4:0]        mul_flags;
@@ -119,6 +124,7 @@ module matrix_unit #(
   // ------------------------------------------------------------ FSM
   typedef enum logic [2:0] {
     IDLE,      // accept IN_FEATURES input beats
+    MAC_FILL,  // register the first multiplier operands from memory
     MAC,       // issue one multiply-add per cycle
     ADD_LAST,  // add the final product (fp_unit pipeline depth)
     BIAS,      // add bias in binary32
@@ -149,8 +155,8 @@ module matrix_unit #(
 
     case (state)
       MAC: begin
-        mul_a = {x_buf[i_cnt], {(32 - W_DATA) {1'b0}}};
-        mul_b = {w_mem[o_cnt][i_cnt], {(32 - W_DATA) {1'b0}}};
+        mul_a = mul_a_q;
+        mul_b = mul_b_q;
         if (i_cnt == IN_W'(0)) begin
           add_a = '0;      // start a fresh accumulation
           add_b = '0;
@@ -189,11 +195,17 @@ module matrix_unit #(
             if (s_axis_tlast || (i_cnt == IN_W'(IN_FEATURES - 1))) begin
               i_cnt <= '0;
               o_cnt <= '0;
-              state <= MAC;
+              state <= MAC_FILL;
             end else begin
               i_cnt <= i_cnt + 1'b1;
             end
           end
+        end
+
+        MAC_FILL: begin
+          mul_a_q <= {x_buf[i_cnt], {(32 - W_DATA) {1'b0}}};
+          mul_b_q <= {w_mem[o_cnt][i_cnt], {(32 - W_DATA) {1'b0}}};
+          state <= MAC;
         end
 
         MAC: begin
@@ -201,6 +213,10 @@ module matrix_unit #(
             i_cnt <= '0;
             state <= ADD_LAST;
           end else begin
+            // Prefetch element i+1; during MAC(i) the MUL output remains the
+            // product of element i-1, so the accumulation order is untouched.
+            mul_a_q <= {x_buf[i_cnt + 1'b1], {(32 - W_DATA) {1'b0}}};
+            mul_b_q <= {w_mem[o_cnt][i_cnt + 1'b1], {(32 - W_DATA) {1'b0}}};
             i_cnt <= i_cnt + 1'b1;
           end
         end
@@ -216,7 +232,7 @@ module matrix_unit #(
             end else begin
               o_cnt <= o_cnt + 1'b1;
               i_cnt <= '0;
-              state <= MAC;
+              state <= MAC_FILL;
             end
           end
         end
