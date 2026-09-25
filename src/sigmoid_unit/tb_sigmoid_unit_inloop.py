@@ -119,7 +119,7 @@ async def test_sigmoid_inloop(dut):
             import torch
             from transformers import AutoModelForCausalLM, AutoTokenizer
 
-            model_path = "/home/jese/tinyllm/granite-4.0-h-350m"
+            model_path = "granite-4.0-h-350m"
             dut._log.info(f"Loading model from {model_path}")
 
             tokenizer = AutoTokenizer.from_pretrained(model_path)

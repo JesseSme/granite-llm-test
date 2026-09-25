@@ -17,7 +17,7 @@ except ImportError:
     from cocotb_tools.runner import get_runner  # cocotb 2.x
 
 ROOT = Path(__file__).resolve().parent
-FP_RTL = Path("/home/jese/tinyllm/systemverilog_fp_unit/rtl")
+FP_RTL = Path("systemverilog_fp_unit/rtl")
 
 RTL_SRCS = [FP_RTL / f for f in (
     "fp_pkg.sv", "fp_add.sv", "fp_mul.sv", "fp_div.sv",

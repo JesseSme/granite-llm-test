@@ -1,3 +1,6 @@
 [submodule "systemverilog_fp_unit"]
 	path = systemverilog_fp_unit
 	url = git@github.com:JesseSme/systemverilog_fp_unit.git
+[submodule "oss-cad-suite-build"]
+	path = oss-cad-suite-build
+	url = https://github.com/yosyshq/oss-cad-suite-build

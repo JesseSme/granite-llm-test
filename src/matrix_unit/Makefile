@@ -5,7 +5,7 @@
 SIM ?= verilator
 TOPLEVEL_LANG = verilog
 
-FP_DIR = /home/jese/tinyllm/systemverilog_fp_unit/rtl
+FP_DIR = systemverilog_fp_unit/rtl
 
 VERILOG_SOURCES = \
   $(FP_DIR)/fp_pkg.sv \

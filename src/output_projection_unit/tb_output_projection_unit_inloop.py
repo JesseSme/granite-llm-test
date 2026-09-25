@@ -22,7 +22,7 @@ from cocotb.triggers import RisingEdge, Timer
 from transformers import AutoModelForCausalLM
 
 ROOT = Path(__file__).resolve().parent
-MODEL_DIR = Path("/home/jese/tinyllm/granite-4.0-h-350m")
+MODEL_DIR = Path(__file__).resolve().parent.parent.parent / "granite-4.0-h-350m"
 HIDDEN = int(os.environ.get("OUTPROJ_HIDDEN", "768"))
 SAMPLE = int(os.environ.get("OUTPROJ_VOCAB", "512"))
 NTOK = 2

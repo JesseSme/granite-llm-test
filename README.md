@@ -37,7 +37,10 @@ scripts/                    experiment / exploration scripts
 results/                    JSON outputs of those experiments
 tests/                      pytest suite (software model checks)
 systemverilog_fp_unit/      floating-point unit library (git submodule)
-oss-cad-suite/              open-source toolchain (Verilator, Yosys, SBY)
+oss-cad-suite-build/        OSS CAD Suite build system (git submodule,
+                            https://github.com/yosyshq/oss-cad-suite-build)
+oss-cad-suite/              open-source toolchain (Verilator, Yosys, SBY;
+                            not tracked - install from the submodule above)
 granite-4.0-h-350m/        model checkpoint (weights + tokenizer)
 AGENTS.md                   development guide, numerics rules, SBY gotchas
 LLM_LAYER_DESCRIPTION.md    the original unit list / specification
@@ -49,16 +52,20 @@ paths relative to the unit directory.
 
 ## Requirements
 
-- **Toolchain** — `oss-cad-suite/` at the project root (Verilator, Yosys,
-  SymbiYosys/SBY, cocotb support). Activate before running anything:
+- **Toolchain** — the OSS CAD Suite build system is vendored as the
+  `oss-cad-suite-build/` submodule
+  (https://github.com/yosyshq/oss-cad-suite-build); grab a release tarball
+  from its releases page (or build the suite from it) and unpack it as
+  `oss-cad-suite/` in the project root. That directory (Verilator, Yosys,
+  SymbiYosys/SBY, cocotb support) is not tracked. Activate before running:
   ```bash
-  source /home/jese/tinyllm/oss-cad-suite/environment
+  source oss-cad-suite/environment
   ```
 - **Python** — the project venv (created from `pyproject.toml` with `uv`),
   providing `cocotb`, `cocotb-tools`, and for the in-loop tests
   `transformers`, `torch`, `safetensors`:
   ```bash
-  /home/jese/tinyllm/.venv/bin/python --version      # Python 3.13
+  .venv/bin/python --version      # Python 3.13
   uv sync --extra test                               # (re)install deps
   ```
   zsh does not word-split unquoted variables: use explicit paths.
@@ -81,8 +88,8 @@ verilator --lint-only -Wall src/<unit>/<unit>.sv
 ### Unit test (small synthetic config, golden sample from torch)
 
 ```bash
-cd src/matrix_unit   && /home/jese/tinyllm/.venv/bin/python run_test.py
-cd src/conv1d_unit   && /home/jese/tinyllm/.venv/bin/python run_test.py tb_conv1d_unit_inloop
+cd src/matrix_unit   && .venv/bin/python run_test.py
+cd src/conv1d_unit   && .venv/bin/python run_test.py tb_conv1d_unit_inloop
 ```
 
 Conventions: most units default to the unit test; `SSM_unit`, `mamba2_unit`
@@ -96,8 +103,8 @@ compares the DUT output. These are long (the weight-load and MAC costs below);
 launch them in the background and poll.
 
 ```bash
-cd src/mamba2_unit    && /home/jese/tinyllm/.venv/bin/python run_test.py inloop
-cd src/SSM_unit       && /home/jese/tinyllm/.venv/bin/python run_test.py inloop
+cd src/mamba2_unit    && .venv/bin/python run_test.py inloop
+cd src/SSM_unit       && .venv/bin/python run_test.py inloop
 ```
 
 Parameter overrides for larger/smaller configs use per-unit environment
@@ -111,8 +118,8 @@ simulated).
 
 ```bash
 cd src/granite_layer
-/home/jese/tinyllm/.venv/bin/python run_test.py inloop   # layer 0, one token
-/home/jese/tinyllm/.venv/bin/python run_test.py e2e     # RTL layer + 31 SW layers
+.venv/bin/python run_test.py inloop   # layer 0, one token
+.venv/bin/python run_test.py e2e     # RTL layer + 31 SW layers
 ```
 
 The `e2e` mode streams layer 0 through the RTL, substitutes its output into a
@@ -129,8 +136,8 @@ bash -c 'ulimit -v 6000000; sby -f bmc.sby'
 ### Software model / experiment checks
 
 ```bash
-/home/jese/tinyllm/.venv/bin/python -m pytest tests/
-/home/jese/tinyllm/.venv/bin/python scripts/<experiment>.py   # writes results/*.json
+.venv/bin/python -m pytest tests/
+.venv/bin/python scripts/<experiment>.py   # writes results/*.json
 ```
 
 ## Verification status (summary)

@@ -19,7 +19,7 @@ from cocotb.triggers import RisingEdge, Timer
 from transformers import AutoModelForCausalLM
 
 ROOT = Path(__file__).resolve().parent
-MODEL_DIR = Path("/home/jese/tinyllm/granite-4.0-h-350m")
+MODEL_DIR = Path(__file__).resolve().parent.parent.parent / "granite-4.0-h-350m"
 HIDDEN = int(os.environ.get("MAMBA_HIDDEN", "768"))
 INTER = int(os.environ.get("MAMBA_INTER", "1536"))
 MLP_INTER = 2048

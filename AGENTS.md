@@ -86,14 +86,17 @@ prediction as the software baseline.
 
 ## Open-Source Toolchain
 
-The `oss-cad-suite/` directory at the project root provides all required tools.
-Activate it before running any tool:
+The `oss-cad-suite/` directory at the project root provides all required
+tools (Verilator, Yosys, SymbiYosys/SBY, cocotb support). It is not tracked;
+the build system is vendored as the `oss-cad-suite-build/` submodule
+(https://github.com/yosyshq/oss-cad-suite-build) - unpack a release tarball
+there or build the suite from it. Activate before running any tool:
 
 ```bash
 source /path/to/tinyllm/oss-cad-suite/environment
 ```
 
-Use `/home/jese/tinyllm/.venv/bin/python` for all Python (zsh does not
+Use `.venv/bin/python` for all Python (zsh does not
 word-split unquoted variables - use `$=VAR` or explicit arguments).
 
 | Tool | Purpose | Command |
@@ -116,7 +119,7 @@ python run_test.py inloop          # in-loop test (real model activations)
 python run_test.py tb_<unit>_inloop  # conv1d/RMSNorm style: module argument
 ```
 
-Launch long runs with `nohup ... > /home/jese/tinyllm/<name>.log 2>&1 &`
+Launch long runs with `nohup ... > <name>.log 2>&1 &`
 (the repo root, not /tmp) and poll. `granite_layer` also has an `e2e` mode.
 
 ### Linting

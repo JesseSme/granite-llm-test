@@ -1,5 +1,5 @@
 {
-  "model_file": "/home/jese/tinyllm/granite-4.0-h-350m/model.safetensors",
+  "model_file": "granite-4.0-h-350m/model.safetensors",
   "embedding_key": "model.embed_tokens.weight",
   "shape": [
     100352,

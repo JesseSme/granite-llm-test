@@ -4,7 +4,7 @@ SIM ?= verilator
 TOPLEVEL_LANG ?= verilog
 
 # Source files
-RTL_DIR = /home/jese/tinyllm/systemverilog_fp_unit/rtl
+RTL_DIR = systemverilog_fp_unit/rtl
 RTL_SRCS = $(RTL_DIR)/fp_pkg.sv \
            $(RTL_DIR)/fp_add.sv \
            $(RTL_DIR)/fp_mul.sv \
