@@ -1,4 +1,4 @@
-status: verified: unit bit-exact, in-loop bit-exact + 0/3072 outside 2e-2 vs model; formal depth 260 PASS
+status: "verified: unit bit-exact, in-loop bit-exact + 0/3072 outside 2e-2 vs model; formal depth 260 PASS"
 #Description
 
 llm_guidance: 

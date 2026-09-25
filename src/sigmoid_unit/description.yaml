@@ -1,4 +1,4 @@
-status: verified: formal depth 10 PASS; LUT-based approximation (<0.5% error), not for fp32-critical paths
+status: "verified: formal depth 10 PASS; LUT-based approximation (<0.5% error), not for fp32-critical paths"
 #Description
 
 llm_guidance: 

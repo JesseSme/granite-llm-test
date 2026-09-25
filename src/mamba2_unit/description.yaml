@@ -1,4 +1,4 @@
-status: verified: full-config unit 768/768 bit-exact, in-loop 0/3840 outside 2e-2; formal depth 260 PASS; conv1d fp32 + eps 1e-5 fixes
+status: "verified: full-config unit 768/768 bit-exact, in-loop 0/3840 outside 2e-2; formal depth 260 PASS; conv1d fp32 + eps 1e-5 fixes"
 #Description
 
 llm_guidance: 
