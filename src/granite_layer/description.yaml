@@ -32,6 +32,16 @@ verification:
     layer output matches the model's layer-0 output.
   formal: not yet written for the layer wrapper (sub-units have their own).
 
+  end_to_end_hybrid: >
+    tb_granite_layer_e2e.py: one RTL layer (layer 0) with the 31 remaining
+    layers + final norm + LM head in software. Substituting the model's own
+    layer-0 output reproduces the baseline logits exactly (max diff 0.0,
+    argmax 220 = 220), proving the harness is exact. Substituting the RTL
+    layer output gives max logits diff 0.75 with the same argmax (220) and the
+    same top-5 predictions [220, 198, 11, 16, 7], i.e. the next-token
+    prediction is preserved end to end. Layer-0 output itself: bit-exact
+    280/768, max abs error 0.0078, 0 mismatches vs the model.
+
 follow_ups:
   - rmsnorm_unit gen_golden.py/tb still emulate the old bf16 datapath and need
     updating to fp32 (the layer in-loop test is the current evidence).

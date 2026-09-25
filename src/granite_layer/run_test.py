@@ -156,10 +156,11 @@ def main() -> int:
     mode = sys.argv[1] if len(sys.argv) > 1 else "unit"
     env = _sim_env()
 
-    if mode == "inloop":
+    if mode in ("inloop", "e2e"):
         params = {"HIDDEN": 768, "INTER": 1536, "NUM_HEADS": 48,
                   "HEAD_DIM": 32, "D_STATE": 128, "MLP_INTER": 2048}
-        ok = run_config(params, "tb_granite_layer_inloop", "sim_build_inloop",
+        ok = run_config(params, ("tb_granite_layer_e2e" if mode == "e2e" else "tb_granite_layer_inloop"),
+                       "sim_build_e2e" if mode == "e2e" else "sim_build_inloop",
                         env, timeout=21600)
         print("mamba2 unit in-loop PASSED" if ok else "mamba2 unit in-loop FAILED",
               flush=True)
