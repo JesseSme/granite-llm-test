@@ -11,44 +11,16 @@ from pathlib import Path
 
 
 def rms_norm_bf16_only(x, weight, eps=1e-5):
-    """Compute RMSNorm entirely in bfloat16 precision (matching RTL).
-    
-    The RTL computes:
-    1. sum_sq = Σ(x_i²)  -- accumulated in bfloat16
-    2. mean = sum_sq / 768  -- bfloat16 division
-    3. mean_eps = mean + eps  -- bfloat16 addition
-    4. rms = sqrt(mean_eps)  -- bfloat16 sqrt
-    5. normalized = x / rms  -- bfloat16 division
-    6. output = normalized * weight  -- bfloat16 multiplication
-    """
-    # Cast to bfloat16 to match RTL precision at every step
-    x_bf16 = x.bfloat16()
-    weight_bf16 = weight.bfloat16()
-    width_bf16 = torch.tensor(768.0, dtype=torch.bfloat16)
-    eps_bf16 = torch.tensor(float(eps), dtype=torch.bfloat16)
-    
-    # Step 1: Sum of squares (accumulated in bfloat16)
-    sum_sq = torch.tensor(0.0, dtype=torch.bfloat16)
-    for i in range(len(x_bf16)):
-        square = x_bf16[i] * x_bf16[i]
-        sum_sq = sum_sq + square
-    
-    # Step 2: Mean (bfloat16 division)
-    mean = sum_sq / width_bf16
-    
-    # Step 3: Add epsilon (bfloat16 addition)
-    mean_eps = mean + eps_bf16
-    
-    # Step 4: Square root (bfloat16 sqrt)
-    rms = torch.sqrt(mean_eps)
-    
-    # Step 5: Normalize (bfloat16 division)
-    normalized = x_bf16 / rms
-    
-    # Step 6: Apply weight (bfloat16 multiplication)
-    output = normalized * weight_bf16
-    
-    return output
+    """fp32 datapath mirror of rmsnorm_unit: sequential fp32 sum of squares,
+    fp32 mean/eps/sqrt/divide/weight multiply, one bfloat16 rounding."""
+    n = int(x.numel())
+    xf = x.float()
+    sumsq = torch.zeros((), dtype=torch.float32)
+    for i in range(n):
+        sumsq = sumsq + xf[i] * xf[i]
+    mean = sumsq / torch.tensor(float(n), dtype=torch.float32)
+    rms = torch.sqrt(mean + torch.tensor(float(eps), dtype=torch.float32))
+    return ((xf / rms) * weight.float()).bfloat16()
 
 
 def float_to_bf16_hex(val):

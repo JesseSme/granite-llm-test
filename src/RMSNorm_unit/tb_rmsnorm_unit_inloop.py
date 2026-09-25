@@ -71,15 +71,15 @@ async def collect_output(dut, expected_count, max_cycles=20000):
 
 
 def rtl_reference(row_bf16, weight_bf16):
-    """Bit-exact bfloat16 emulation of the RTL RMSNorm algorithm."""
-    x = row_bf16.bfloat16()
-    w = weight_bf16.bfloat16()
-    sum_sq = torch.tensor(0.0, dtype=torch.bfloat16)
-    for i in range(x.shape[0]):
-        sum_sq = sum_sq + x[i] * x[i]
-    mean = sum_sq / torch.tensor(float(x.shape[0]), dtype=torch.bfloat16)
-    rms = torch.sqrt(mean + torch.tensor(EPS, dtype=torch.bfloat16))
-    return (x / rms) * w
+    """fp32 datapath mirror of rmsnorm_unit (same op order as the RTL)."""
+    n = int(row_bf16.numel())
+    xf = row_bf16.float()
+    sumsq = torch.zeros((), dtype=torch.float32)
+    for i in range(n):
+        sumsq = sumsq + xf[i] * xf[i]
+    mean = sumsq / torch.tensor(float(n), dtype=torch.float32)
+    rms = torch.sqrt(mean + torch.tensor(float(EPS), dtype=torch.float32))
+    return ((xf / rms) * weight_bf16.float()).bfloat16()
 
 
 def u16_to_bf16(values):
