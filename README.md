@@ -177,7 +177,11 @@ See `AGENTS.md` for the full list and the SymbiYosys gotchas.
 
 ## Known gaps
 
-- Attention-type variant of `granite_layer` (attention layers 10/13/17/27).
-- `fp32_to_bf16_round.sv` still to be added to `RMSNorm_unit/formal`.
-- `softmax_unit`'s LUT exp is coarse; attention uses `attn_softmax_seq`.
+- Attention-type variant of `granite_layer` (attention layers 10/13/17/27):
+  needs an `attention_unit` wrapper (same residual/norm structure, plus the
+  position input) and its own in-loop verification.
+- `softmax_unit`'s LUT exp is coarse (max rel ~0.21); the attention unit uses
+  the accurate `attn_softmax_seq` instead. Making `softmax_unit` accurate means
+  replacing the row pipeline's LUT exp with the serial `fp_exp_seq`.
 - `fp_unit` is spec-only here; the implementation lives in the submodule.
+  (`RMSNorm_unit/formal` now includes `fp32_to_bf16_round.sv`; BMC re-run.)
