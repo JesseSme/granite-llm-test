@@ -40,3 +40,9 @@
   torch's bf16 `tensor / 3` (fp32 internal precision, one rounding); dividing
   by 3.0 instead of multiplying by 1/3 avoids the ~1 ULP error of the
   rounded reciprocal.
+
+- MATRIX_LANES = 4 rollout (branch opt/lanes-rollout): the LM-head matrix_unit
+  now computes four output rows per pass (bit-identical). Verified: lint
+  clean; unit test bit-exact 256/256; in-loop sampled-vocab run bit-exact
+  1024/1024 (max abs/rel 0.0). The full 100352-row head drops from ~77.4M to
+  ~19.4M projection cycles.

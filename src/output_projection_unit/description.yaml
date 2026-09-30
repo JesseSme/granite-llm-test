@@ -26,37 +26,44 @@ interface:
   m_axis_tvalid/tready/tdata/tlast: AXI-Stream output (VOCAB bf16 beats)
   busy: output, 1 bit
 
-max_clock_speed: 150 MHz (same binary32 MAC datapath as matrix_unit, which is
-  the critical path; estimate from the Verilator timing of the sibling units)
+max_clock_speed: 150 MHz (estimated; the matrix_unit binary32 MAC loop it used
+  to share is now 2-stage pipelined (137 ltp proxy in matrix_unit), so the
+  scale stage's fp32 DIV and the sequencer set the bound; estimate from the
+  Verilator timing of the sibling units)
 
 characteristics:
-  latency: VOCAB * (HIDDEN + 3) + 2 clock cycles per input vector (HIDDEN MAC
-    cycles per output plus the last-product add, the scale divide and the
-    bf16 round)
-  throughput: one output element per HIDDEN + 3 cycles; the input vector is
-    accepted while the projection is idle
+  latency: >
+    With MATRIX_LANES = 4 the projection emits four logits per
+    HIDDEN + 4 + 4 cycles pass (~HIDDEN + 8 cycles per 4 logits), plus the
+    one-entry scale pipeline (divide + round): the full 100352-row head drops
+    from ~77.4M to ~19.4M cycles. The scale stage still accepts one projected
+    beat at a time; the matrix AXI handshake hides the extra internal latency.
+  throughput: 4 output elements per HIDDEN + 8 cycles (one per lane per MAC
+    cycle); the input vector is accepted while the projection is idle
   architecture: >
-    matrix_unit (HIDDEN -> VOCAB, binary32 sequential accumulation, one
-    bfloat16 rounding) feeding a one-entry scale stage: the bfloat16 logit is
-    widened to fp32, divided by 3.0 with an fp32 fp_unit (OP_DIV, W_MANT=23),
-    and rounded to bfloat16 once with fp32_to_bf16_round. The scale stage
-    holds one result under downstream backpressure and only accepts the next
-    projected beat when free.
+    matrix_unit (HIDDEN -> VOCAB, MATRIX_LANES = 4, binary32 sequential
+    accumulation, one bfloat16 rounding) feeding a one-entry scale stage: the
+    bfloat16 logit is widened to fp32, divided by 3.0 with an fp32 fp_unit
+    (OP_DIV, W_MANT=23), and rounded to bfloat16 once with fp32_to_bf16_round.
+    The scale stage holds one result under downstream backpressure and only
+    accepts the next projected beat when free.
   scaling: "logits / 3 (config.logits_scaling), fp32 division then one bf16 round"
   bias: none (tied LM head, mamba_proj_bias/attention_bias are false)
   vocab: 100352 (parameterized; tests use a reduced or sampled vocabulary
     because the full 77M-parameter table cannot be simulated)
 
 verification:
-  lint: Verilator -Wall clean
+  lint: Verilator -Wall clean (also with MATRIX_LANES = 4)
   unit: tb_output_projection_unit.py (HIDDEN=32, VOCAB=64, 4 vectors) -
-    bit-exact 256/256, max abs/rel error 0.0 vs the torch reference
+    bit-exact 256/256, max abs/rel error 0.0 vs the torch reference; re-run
+    with MATRIX_LANES = 4: bit-exact 256/256
   in_loop: tb_output_projection_unit_inloop.py - real Granite 4.0-H-350M
     final-norm hidden states and the tied lm_head weight; 512 of the 100352
     vocabulary rows are sampled (argmax rows plus seeded random rows) and only
     those weight rows are loaded, because the full table cannot be simulated.
     Bit-exact 1024/1024, max abs/rel error 0.0 vs
-    model.lm_head(hidden_states) / logits_scaling.
+    model.lm_head(hidden_states) / logits_scaling; re-run with
+    MATRIX_LANES = 4: bit-exact 1024/1024, max abs/rel error 0.0.
   formal: formal/bmc.sby - BMC depth 60 (smtbmc boolector) with a
     handshake-exact matrix_unit stub. PASSES (depth 60). Properties (gated on
     an observed reset so free initial register values cannot fail them): no

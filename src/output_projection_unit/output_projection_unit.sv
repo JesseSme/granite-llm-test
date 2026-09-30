@@ -55,13 +55,18 @@ module output_projection_unit #(
   localparam int W_FP32   = 1 + 8 + W_MANT32;
   localparam logic [W_FP32-1:0] C_LOGITS_SCALING = 32'h40400000;  // 3.0
 
+  // Output-row parallelism of the LM-head projection (bit-exact; the stream
+  // handshake hides the extra internal latency, see matrix_unit.sv).
+  localparam int MATRIX_LANES = 4;
+
   logic              proj_m_tvalid, proj_m_tready, proj_m_tlast;
   logic [W_DATA-1:0] proj_m_tdata;
   logic              proj_busy;
 
   matrix_unit #(
     .IN_FEATURES (HIDDEN),
-    .OUT_FEATURES(VOCAB)
+    .OUT_FEATURES(VOCAB),
+    .LANES       (MATRIX_LANES)
   ) u_proj (
     .clk          (clk),
     .rst_n        (rst_n),

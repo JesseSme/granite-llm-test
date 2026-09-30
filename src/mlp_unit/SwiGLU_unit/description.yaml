@@ -107,9 +107,10 @@ interface:
     width: 1
     description: Unit is computing/streaming (input not accepted)
 
-max_clock_speed: 150 MHz (estimated; the critical path is the matrix_unit
-  binary32 MAC loop (~200 MHz) plus the silu pipeline's fp_unit/DIV stages; no
-  STA cell library available)
+max_clock_speed: 150 MHz (estimated; the previous bound was the matrix_unit
+  binary32 MAC loop (~200 MHz), now 2-stage pipelined (137 ltp proxy in
+  matrix_unit); the estimate now covers the silu pipeline's fp_unit/DIV stages;
+  no STA cell library available)
 
 characteristics:
   latency: >
@@ -117,18 +118,21 @@ characteristics:
     (one bf16 weight per cycle, ~31 ms at 150 MHz). Per vector: input frame
     (768) + gate+up feed (768) + gate+up drain (4096) + silu
     (INTER x ~35 cycles = ~72k) + down feed/drain (2048 + 768) plus the
-    projection MAC time (4096 x 771 + 768 x 2051) -> ~4.8M cycles per vector
-    (~32 ms at 150 MHz).
+    projection MAC time. The projections use MATRIX_LANES = 4: 4096/4 x 780 +
+    768/4 x 1548 -> ~1.1M cycles, so ~1.25M cycles per vector at LANES=4
+    (~8.3 ms at 150 MHz; was ~4.8M at LANES=1).
   throughput: >
-    One 768-wide vector per ~4.8M cycles; the fused gate+up projection (4096
-    outputs over 768 inputs) dominates, followed by the down projection (768
-    outputs over 2048 inputs). The silu is a sequential per-element pipeline
-    (~35 cycles/element, ~72k cycles for INTER=2048) and is not the bottleneck.
+    One 768-wide vector per ~1.25M cycles at MATRIX_LANES = 4; the fused
+    gate+up projection (4096 outputs over 768 inputs) still dominates, followed
+    by the down projection (768 outputs over 2048 inputs). The silu is a
+    sequential per-element pipeline (~35 cycles/element, ~72k cycles for
+    INTER=2048) and is not the bottleneck.
   resource_usage: >
-    Two matrix_unit instances (weights 2*INTER*HIDDEN + HIDDEN*INTER =
-    4.72M x 16-bit = 9.4 MB), one fp_exp_seq (accurate exp), three binary32
-    fp_unit instances (ADD, DIV, MUL) and two fp32_to_bf16_round stages.
-    Buffers: x 768 x 16-bit, combined 4096 x 16-bit.
+    Two matrix_unit instances with MATRIX_LANES = 4 (weights 2*INTER*HIDDEN +
+    HIDDEN*INTER = 4.72M x 16-bit = 9.4 MB, 8 pipelined MAC datapaths total),
+    one fp_exp_seq (accurate exp), three binary32 fp_unit instances (ADD, DIV,
+    MUL) and two fp32_to_bf16_round stages. Buffers: x 768 x 16-bit, combined
+    4096 x 16-bit.
   notes: >
     AXI-Stream contract: HIDDEN bf16 beats per frame with tlast on the final
     beat; the output frame is HIDDEN bf16 beats, held stable under

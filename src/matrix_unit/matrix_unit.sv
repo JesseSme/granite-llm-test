@@ -16,21 +16,23 @@
 //
 // Architecture:
 //   - every pass computes ROWSPW = 2*LANES output rows: LANES complete binary32
-//     MAC datapaths (own MUL fp_unit and accumulator) each carry TWO
+//     MAC datapaths (own pipelined MUL and accumulator) each carry TWO
 //     interleaved accumulator contexts (rows word*ROWSPW + lane and
-//     word*ROWSPW + LANES + lane). The adder is a 2-stage registered fp32
-//     adder (fp_add_pipe2, 2-cycle latency): context A submits on even MAC
-//     slots, context B on odd slots, so the MAC issue rate stays 1/cycle per
-//     lane while each row keeps the exact sequential fp32 add order of the
+//     word*ROWSPW + LANES + lane). Both arithmetic units are 2-stage
+//     registered: the adder (fp_add_pipe2, 2-cycle latency) and the
+//     multiplier (fp_mul_pipe2, 2-cycle latency). Context A submits on even
+//     MAC slots, context B on odd slots, so the MAC issue rate stays 1/cycle
+//     per lane while each row keeps the exact sequential fp32 add order of the
 //     original single-cycle implementation (seed 0+0, then products in
 //     declaration order, then the bias). The accumulator is the adder's own
 //     output register: during a context's slot it always holds that context's
 //     previous sum (updated every other cycle), so no extra accumulator
 //     registers are needed.
 //   - the multiplier operands are registered (MAC_FILL loads the first pair,
-//     MAC prefetches) so the weight/input memory read is off the multiplier
-//     input path; the multiplier still produces one product per cycle,
-//     alternating between the two contexts of a lane
+//     MAC prefetches two slots ahead) so the weight/input memory read is off
+//     the multiplier input path; with the pipelined multiplier the product of
+//     operands loaded at slot d appears at mul_y in slot d+3, so the prefetch
+//     supplies A_k one slot earlier (odd slots) and B_k on even slots
 //   - per pass: MAC_FILL + (2*IN_FEATURES + 6) MAC slots (2 seeds + 2*IN
 //     accumulate + 2 bias + 2 result-latch cycles) + STORE + 2*LANES output
 //     beats, i.e. the same cycles/output-row as the single-context version
@@ -128,23 +130,10 @@ module matrix_unit #(
   genvar l;
   generate
     for (l = 0; l < LANES; l++) begin : g_lane
-      fp_pkg::op_t       mul_mode;
-      fp_pkg::rounding_t mul_rm;
-      /* verilator lint_off UNUSEDSIGNAL */
-      logic [1:0]        mul_cmp;
-      logic [4:0]        mul_flags;
-      logic              unused_out_valid_mul;
-      /* verilator lint_on UNUSEDSIGNAL */
-
-      assign mul_mode = fp_pkg::OP_MUL;
-      assign mul_rm   = fp_pkg::RM_RNE;
-
-      fp_unit #(.W_EXP(8), .W_MANT(23)) u_fp_mul (
+      // 2-stage registered fp32 multiplier (RM_RNE), 2-cycle latency.
+      fp_mul_pipe2 #(.W_EXP(8), .W_MANT(23)) u_fp_mul (
         .clk(clk), .rst_n(rst_n),
-        .mode(mul_mode), .rm(mul_rm),
-        .a(mul_a), .b(mul_b[l]), .c('0),
-        .y(mul_y[l]), .cmp(mul_cmp), .flags(mul_flags),
-        .in_valid(1'b1), .out_valid(unused_out_valid_mul)
+        .a(mul_a), .b(mul_b[l]), .y(mul_y[l])
       );
 
       // 2-stage registered fp32 adder (RM_RNE, OP_ADD), 2-cycle latency.
@@ -183,10 +172,13 @@ module matrix_unit #(
   assign rows_left  = ROW_W'(OUT_FEATURES) - row_base;
   assign lanes_this = (rows_left < ROW_W'(ROWSPW)) ? rows_left : ROW_W'(ROWSPW);
 
-  // Prefetch element index: slot c consumes the product of element c/2 in the
-  // opposite-parity context (see the MAC prefetch comment).
+  // Prefetch element index: with the pipelined multiplier, operands loaded at
+  // slot d appear at mul_y in slot d+3, so the product A_k consumed at slot
+  // 2k+2 is loaded at the odd slot 2k-1 (element k, context A row) and B_k
+  // consumed at slot 2k+3 is loaded at the even slot 2k (element k, context B
+  // row): element index ceil(slot/2). See the MAC prefetch comment.
   logic [IN_W-1:0] pf_elem;
-  assign pf_elem = IN_W'(slot_cnt >> 1);
+  assign pf_elem = IN_W'((slot_cnt + SLOT_W'(slot_cnt[0])) >> 1);
 
   assign s_axis_tready = (state == IDLE);
   assign busy          = (state != IDLE);
@@ -265,7 +257,7 @@ module matrix_unit #(
         end
 
         MAC_FILL: begin
-          // Product for slot 0 (discarded seed slot): context A element 0.
+          // Product for the first context-A accumulate (slot 2): element 0.
           mul_a_q <= {x_buf[0], {(32 - W_DATA) {1'b0}}};
           for (int li = 0; li < LANES; li++)
             mul_b_q[li] <= {w_mem[o_cnt][0][(li * W_DATA) +: W_DATA],
@@ -276,18 +268,17 @@ module matrix_unit #(
         MAC: begin
           slot_cnt <= slot_cnt + 1'b1;
 
-          // Prefetch the operands whose product is consumed at slot+2: the
-          // multiplier has a registered operand stage (q) plus a registered
-          // output (mul_y), so a load at slot c appears at mul_y in slot c+2.
-          // Slots alternate context A/B per element: even c loads A's element
-          // c/2, odd c loads B's element c/2. The last needed product is
-          // B element IN_FEATURES-1 at slot 2*IN_FEATURES+1, loaded at c =
-          // 2*IN_FEATURES-1.
-          if (slot_cnt < SLOT_W'(CLIMIT)) begin
+          // Prefetch the operands whose product is consumed at slot+3: the
+          // multiplier has a registered operand stage (q) plus the 2-cycle
+          // fp_mul_pipe2, so a load at slot c appears at mul_y in slot c+3.
+          // Operands alternate contexts: even c loads B's element c/2, odd c
+          // loads A's element (c+1)/2. The last needed products (both A and B
+          // element IN_FEATURES-1) are loaded by slot 2*IN_FEATURES-2.
+          if (slot_cnt < SLOT_W'(CLIMIT - 1)) begin
             mul_a_q <= {x_buf[pf_elem], {(32 - W_DATA) {1'b0}}};
             for (int li = 0; li < LANES; li++)
               mul_b_q[li] <= {w_mem[o_cnt][pf_elem]
-                                   [(li + (slot_cnt[0] ? LANES : 0)) * W_DATA +: W_DATA],
+                                   [(li + (slot_cnt[0] ? 0 : LANES)) * W_DATA +: W_DATA],
                               {(32 - W_DATA) {1'b0}}};
           end
 

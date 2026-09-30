@@ -31,6 +31,8 @@ verification:
     one token: max abs error 0.0078, 0 mismatches (tolerance 2e-2), PASSED.
     This test exposed the rmsnorm_unit bf16 datapath bug: with the fp32 fix the
     layer output matches the model's layer-0 output.
+    Re-run after the LANES=4 / fp_mul_pipe2 optimizations: identical result
+    (bit-exact 280/768, max abs 0.0078, 0 mismatches, PASSED).
   formal: not yet written for the layer wrapper (sub-units have their own).
 
   end_to_end_hybrid: >
@@ -42,6 +44,9 @@ verification:
     same top-5 predictions [220, 198, 11, 16, 7], i.e. the next-token
     prediction is preserved end to end. Layer-0 output itself: bit-exact
     280/768, max abs error 0.0078, 0 mismatches vs the model.
+    Re-run after the LANES=4 / fp_mul_pipe2 optimizations: identical results
+    (bit-exact 280/768, max abs 0.0078, argmax 220, top-5
+    [220, 198, 11, 16, 7], End-to-end hybrid PASSED).
 
 follow_ups:
   - rmsnorm_unit gen_golden.py/tb still emulate the old bf16 datapath and need

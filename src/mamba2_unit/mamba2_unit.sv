@@ -74,6 +74,10 @@ module mamba2_unit #(
   localparam logic [31:0] C_EPS = 32'h3727C5AC;  // 1e-5 (config.rms_norm_eps)
   localparam logic [31:0] C_ONE = 32'h3F800000;
 
+  // Output-row parallelism of the in_proj/out_proj projections (bit-exact;
+  // the AXI handshake hides the extra internal latency, see matrix_unit.sv).
+  localparam int MATRIX_LANES = 4;
+
   // fp32 bit pattern of the positive integer INTER (INTER < 2^24, exact).
   function automatic int msb_idx(input int unsigned v);
     int r;
@@ -123,7 +127,8 @@ module mamba2_unit #(
   logic        ssm_m_tvalid, ssm_m_tready, ssm_m_tlast;
   logic [31:0] ssm_m_tdata;
 
-  matrix_unit #(.IN_FEATURES(HIDDEN), .OUT_FEATURES(PROJ)) u_inproj (
+  matrix_unit #(.IN_FEATURES(HIDDEN), .OUT_FEATURES(PROJ),
+                .LANES(MATRIX_LANES)) u_inproj (
     .clk(clk), .rst_n(rst_n), .load_en(load_en && (load_sel == 3'd0)),
     .load_out_idx(load_out_idx), .load_in_idx(load_in_idx),
     .load_wdata(load_wdata), .load_is_bias(1'b0),
@@ -134,7 +139,8 @@ module mamba2_unit #(
     .busy(/*unused*/)
   );
 
-  matrix_unit #(.IN_FEATURES(INTER), .OUT_FEATURES(HIDDEN)) u_outproj (
+  matrix_unit #(.IN_FEATURES(INTER), .OUT_FEATURES(HIDDEN),
+                .LANES(MATRIX_LANES)) u_outproj (
     .clk(clk), .rst_n(rst_n), .load_en(load_en && (load_sel == 3'd1)),
     .load_out_idx(load_out_idx), .load_in_idx(load_in_idx),
     .load_wdata(load_wdata), .load_is_bias(1'b0),

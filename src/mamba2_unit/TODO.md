@@ -62,3 +62,10 @@
   conv1d_unit, ssm_unit, silu_seq) because blackboxes are rejected by SBY's
   `hierarchy -smtcheck`; the silu stub keeps the 1-cycle valid_o latency so
   the sequencer's phases stay exercisable.
+
+- MATRIX_LANES = 4 rollout (branch opt/lanes-rollout): the in_proj and
+  out_proj matrix_unit instances now compute four output rows per pass
+  (bit-identical). Verified: lint clean; small-config unit test 32/32 PASS
+  (max abs 0.0); in-loop full-config 5-token run max_abs 3.906e-03, max_rel
+  7.692e-03, 0/3840 outside 2e-2, non-finite 0, in ~66 min (measured
+  ~2.3M cycles/token, was ~5.1M).

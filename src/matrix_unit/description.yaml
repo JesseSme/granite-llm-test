@@ -39,13 +39,22 @@ description: >
   replicated.
 
   Parameter LANES (default 1): each lane owns a complete binary32 MAC datapath
-  (its own fp_unit MUL, fp_unit ADD and accumulator) and computes a different
-  output row. The lanes are independent rows and never exchange data, so every
-  row keeps the exact sequential fp32 accumulation order and the result is
-  bit-identical to LANES=1. Weight rows are packed LANES per memory word so one
-  read serves all lanes; rows are emitted in row order and the final block is
-  masked when OUT_FEATURES % LANES != 0. LANES=1 reproduces the original
-  behavior/configs.
+  (its own fp_mul_pipe2 MUL, fp_add_pipe2 ADD and accumulator) and computes a
+  different output row. The lanes are independent rows and never exchange data,
+  so every row keeps the exact sequential fp32 accumulation order and the
+  result is bit-identical to LANES=1. Weight rows are packed LANES per memory
+  word so one read serves all lanes; rows are emitted in row order and the
+  final block is masked when OUT_FEATURES % LANES != 0. LANES=1 reproduces the
+  original behavior/configs.
+
+  Both arithmetic units are 2-stage registered (`fp_add_pipe2`, `fp_mul_pipe2`,
+  both bit-identical to the combinational fp_add/fp_mul with RM_RNE). Each lane
+  interleaves two accumulator contexts through the shared 2-cycle adder (even
+  MAC slots feed context A, odd slots context B); the registered multiplier
+  operands are prefetched one slot earlier (operands loaded at slot d appear at
+  mul_y in slot d+3, so even slots load context B and odd slots context A,
+  element index ceil(d/2)). The MAC issue rate is one per lane per cycle and
+  the slot count is unchanged.
 
 interface:
   description: >
@@ -121,7 +130,9 @@ max_clock_speed: >
   ~300 MHz (ltp-proxy estimate; the flattened critical path dropped from 221
   (master) / 211 (post-P4) to 137 logic levels with the 2-stage fp_add_pipe2
   accumulator, ~1.54x the previous proxy bound of 200 MHz; no STA cell library
-  available)
+  available). With fp_mul_pipe2 the multiplier itself is 74 levels (was 148),
+  so the flattened 32x16 LANES=1 design stays at 137: the pipelined adder is
+  now the sole critical path.
 
 characteristics:
   latency: >
@@ -138,11 +149,11 @@ characteristics:
   resource_usage: >
     Parameterized (W_WORDS x IN_FEATURES) x (2*LANES x 16)-bit weight RAM,
     N_ROWS x 16-bit bias RAM (rows padded to a ROWSPW multiple),
-    IN_FEATURES x 16-bit input buffer, LANES x (one binary32 fp_unit MUL + one
-    binary32 fp_add_pipe2 2-stage adder + two fp32_to_bf16_round units + two
-    32-bit context result registers), plus a registered x operand (mul_a_q)
-    shared by the lanes and LANES registered weight operands (mul_b_q[l])
-    between the weight memory and the multipliers.
+    IN_FEATURES x 16-bit input buffer, LANES x (one binary32 fp_mul_pipe2
+    2-stage multiplier + one binary32 fp_add_pipe2 2-stage adder + two
+    fp32_to_bf16_round units + two 32-bit context result registers), plus a
+    registered x operand (mul_a_q) shared by the lanes and LANES registered
+    weight operands (mul_b_q[l]) between the weight memory and the multipliers.
   notes: >
     AXI-Stream contract: the input vector is IN_FEATURES beats with tlast on the
     final beat (the counter bound also ends streams that omit tlast); the output
@@ -152,11 +163,12 @@ characteristics:
     (context A on even MAC slots, context B on odd slots); the adder output
     register is each context's accumulator because it is only overwritten by
     that context's next submission. The multiplier operands are registered and
-    prefetched two slots ahead (the MUL has an operand register + output
-    register), the products alternate A/B per input element, and the per-row add
-    sequence is exactly the single-context one (0+0 seed, products in order,
-    bias last), so every output row is bit-identical to the LANES=1, one-context
-    schedule. final_a/final_b latch the two biased sums per lane and the STORE
+    prefetched three slots ahead (the MUL has an operand register plus the
+    2-cycle fp_mul_pipe2, so a load at slot d appears at mul_y in slot d+3; even
+    slots load context B and odd slots context A, element index ceil(d/2)), the
+    products alternate A/B per input element, and the per-row add sequence is
+    exactly the single-context one (0+0 seed, products in order, bias last), so
+    every output row is bit-identical to the LANES=1, one-context schedule. final_a/final_b latch the two biased sums per lane and the STORE
     stage places them in row order in out_buf (registered tvalid, data stable
     under backpressure). The final pass masks to OUT_FEATURES % ROWSPW valid
     rows.
@@ -168,8 +180,10 @@ characteristics:
     - IN=32 OUT=6 LANES=4 (masked tail): 48/48 bit-exact (643 busy cycles)
     Busy cycles are identical to the pre-P2 single-context schedule (the cycle
     model is unchanged); the pipelined adder was additionally checked against
-    fp_add by a standalone Verilator C++ harness over 20,000,000 biased-random
-    vectors and zeros (0 mismatches in y): fp_add_pipe2 is bit-identical.
+    fp_add and the pipelined multiplier (fp_mul_pipe2) against fp_mul by
+    standalone Verilator C++ harnesses over 20,000,000 biased-random vectors
+    (including zeros, infinities, NaNs, subnormals and bf16-widened patterns),
+    0 mismatches in y: both pipe2 modules are bit-identical.
     Run: `.venv/bin/python run_test.py`, `... run_test.py lanes4`, `... tail`.
   in_loop_verification: >
     tb_matrix_unit_inloop.py: real Granite Linear layers. q_proj (768x768) of
@@ -177,8 +191,9 @@ characteristics:
     (768x256) of layer 10: 2048/2048 bit-exact (100%, max abs error 0.0).
     Run: `.venv/bin/python run_test.py inloop`.
   formal_verification: >
-    formal/bmc.sby (SymBiYosys BMC, depth 40, fp_units and fp_add_pipe2
-    abstracted via anyseq stubs fp_unit_stub.sv / fp_add_pipe2_stub.sv) proves:
+    formal/bmc.sby (SymBiYosys BMC, depth 40, FP arithmetic abstracted via
+    anyseq stubs fp_unit_stub.sv / fp_add_pipe2_stub.sv / fp_mul_pipe2_stub.sv)
+    proves:
     s_axis_tready == !busy, output valid only while busy, tlast only on the
     final output beat, busy rises only after an accepted input beat, and exactly
     OUT_FEATURES output beats per input vector. Run: sby -f bmc.sby.
@@ -201,11 +216,14 @@ optimization:
     P3, P1 and P2 (2-stage fp_add_pipe2 + two interleaved accumulator contexts
     per lane) implemented, verified bit-exact at LANES=1/4 and with a masked
     tail, in-loop, and formally; P4 (balanced leading-one detectors, library
-    commit 2c013aa) implemented and verified. Fmax proxy (Yosys ltp -noff,
-    flattened matrix_unit 32x16 LANES=1): 221 -> 211 (P4) -> 137 (P2) levels,
-    ~1.54x; busy cycles unchanged (4755/1299/643). Remaining opportunities:
-    P5 (direct fp_mul instance / specialised bf16 multiplier), P6 (overlap OUT
-    with the next pass, tie off constant mode/rm).
+    commit 2c013aa) implemented and verified; P5 (2-stage fp_mul_pipe2
+    multiplier, library commit 83f470e) integrated with the prefetch shifted one
+    slot and verified by 20M-vector equivalence, the same bit-exact unit tests,
+    in-loop, formal, and ltp. Fmax proxy (Yosys ltp -noff, flattened
+    matrix_unit 32x16 LANES=1): 221 -> 211 (P4) -> 137 (P2/P5, adder-limited;
+    fp_mul 148 -> 74 with P5), ~1.54x; busy cycles unchanged (4755/1299/643).
+    Remaining opportunities: P6 (overlap OUT with the next pass, tie off
+    constant mode/rm).
 
 current_dut: matrix_unit
 

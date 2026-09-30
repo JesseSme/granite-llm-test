@@ -49,3 +49,10 @@
 - The in-loop model comparison is looser (2e-2) because ATen's blocked-GEMM
   accumulation order differs from the RTL's sequential fp32 accumulation over
   the 2048-term down projection (measured 7.8e-3 absolute).
+
+- MATRIX_LANES = 4 rollout (branch opt/lanes-rollout): both matrix_unit
+  instances (gate+up and down) now compute four output rows per pass
+  (bit-identical). Verified: lint clean; unit test 64/64 bit-exact; in-loop
+  sequential-emulation comparison 0/3072 outside 1e-3 (max abs 0.0) and model
+  comparison 0/3072 outside 2e-2 (max abs 7.8e-3), in ~38 min (was ~44 min).
+  Measured ~1.25M cycles/token (was ~4.8M).

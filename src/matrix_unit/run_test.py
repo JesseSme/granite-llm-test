@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parent
 FP_RTL = ROOT.parent.parent / "systemverilog_fp_unit" / "rtl"
 
 RTL_SRCS = [FP_RTL / f for f in (
-    "fp_pkg.sv", "fp_add.sv", "fp_add_pipe2.sv", "fp_mul.sv", "fp_div.sv",
+    "fp_pkg.sv", "fp_add.sv", "fp_add_pipe2.sv", "fp_mul.sv", "fp_mul_pipe2.sv", "fp_div.sv",
     "fp_sqrt.sv", "fp_fma.sv", "fp_minmax.sv", "fp_cmp.sv",
     "fp_totalorder.sv", "fp_roundint.sv", "fp32_to_bf16_round.sv",
     "fp_unit.sv",

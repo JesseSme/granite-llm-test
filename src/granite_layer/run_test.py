@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Build and run the cocotb regression for the Mamba2 mixer unit.
+"""Build and run the cocotb regression for granite_layer (the Granite
+MoeHybrid mamba decoder layer: input norm, mamba2 mixer, post norm, MLP).
 
 Usage:
-  run_test.py            # unit test (small synthetic parameters)
   run_test.py inloop     # in-loop test with a real Granite Mamba layer
+  run_test.py e2e        # end-to-end: this RTL layer + 31 software layers
+Run one heavy build at a time (real layer weights).
 """
 
 from __future__ import annotations
@@ -26,7 +28,7 @@ REPO = ROOT.parent.parent
 FP_RTL = REPO / "systemverilog_fp_unit" / "rtl"
 
 RTL_SRCS = [FP_RTL / f for f in (
-    "fp_pkg.sv", "fp_add.sv", "fp_add_pipe2.sv", "fp_mul.sv", "fp_div.sv",
+    "fp_pkg.sv", "fp_add.sv", "fp_add_pipe2.sv", "fp_mul.sv", "fp_mul_pipe2.sv", "fp_div.sv",
     "fp_sqrt.sv", "fp_fma.sv", "fp_minmax.sv", "fp_cmp.sv",
     "fp_totalorder.sv", "fp_roundint.sv", "fp32_to_bf16_round.sv",
     "fp_unit.sv",
@@ -100,7 +102,7 @@ def run_config(params: dict, test_module: str, build_subdir: str, env: dict,
                timeout: int, show: bool = True) -> bool:
     build_dir = ROOT / build_subdir
     desc = " ".join(f"{k}={v}" for k, v in params.items())
-    print(f"=== Building mamba2_unit {desc} -> {build_subdir} ===", flush=True)
+    print(f"=== Building granite_layer {desc} -> {build_subdir} ===", flush=True)
     runner = get_runner("verilator")
     runner.build(
         sources=RTL_SRCS,
@@ -162,8 +164,8 @@ def main() -> int:
         ok = run_config(params, ("tb_granite_layer_e2e" if mode == "e2e" else "tb_granite_layer_inloop"),
                        "sim_build_e2e" if mode == "e2e" else "sim_build_inloop",
                         env, timeout=21600)
-        print("mamba2 unit in-loop PASSED" if ok else "mamba2 unit in-loop FAILED",
-              flush=True)
+        label = "granite_layer e2e" if mode == "e2e" else "granite_layer in-loop"
+        print(f"{label} PASSED" if ok else f"{label} FAILED", flush=True)
         return 0 if ok else 1
 
     params = {"HIDDEN": int(os.environ.get("MAMBA_HIDDEN", "8")),
@@ -173,7 +175,8 @@ def main() -> int:
               "HEAD_DIM": int(os.environ.get("MAMBA_HEAD_DIM", "2")),
               "D_STATE": int(os.environ.get("MAMBA_D_STATE", "2"))}
     ok = run_config(params, "tb_mamba2_unit", "sim_build", env, timeout=3600)
-    print("mamba2 unit PASSED" if ok else "mamba2 unit FAILED", flush=True)
+    print("granite_layer unit PASSED" if ok else "granite_layer unit FAILED",
+          flush=True)
     return 0 if ok else 1
 
 

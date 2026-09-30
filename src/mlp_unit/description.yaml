@@ -97,12 +97,14 @@ max_clock_speed: 150 MHz (estimated; identical datapath to swiglu_unit — the
 characteristics:
   latency: >
     Identical to swiglu_unit: weight load 4,718,592 cycles at 768/2048, then
-    ~4.8M cycles per vector (measured ~4.8M in-loop, excluding the load).
-  throughput: one 768-wide vector per ~4.8M cycles.
+    ~1.25M cycles per vector with the gate+up/down projections at
+    MATRIX_LANES = 4 (measured ~1.25M in-loop, excluding the load; the
+    projections are ~4x faster than the LANES=1 ~4.8M).
+  throughput: one 768-wide vector per ~1.25M cycles at MATRIX_LANES = 4.
   resource_usage: >
     Pure wrapper (no additional logic); the SwiGLU datapath is 2 matrix_unit
-    instances (9.4 MB of bf16 weights), 1 fp_exp_seq, 3 fp_unit and 2 bf16
-    rounders.
+    instances with MATRIX_LANES = 4 (9.4 MB of bf16 weights, 8 pipelined MAC
+    datapaths total), 1 fp_exp_seq, 3 fp_unit and 2 bf16 rounders.
   notes: >
     GraniteMoeHybridMLP is exactly the SwiGLU block, so this unit is a
     pass-through wrapper around swiglu_unit (the model's class name is the
@@ -113,7 +115,8 @@ characteristics:
   unit_verification: >
     tb_mlp_unit.py: HIDDEN=16, INTER=8, 4 vectors — 64/64 outputs bit-exact vs
     the fp32 golden (matrix_unit-style sequential accumulation, bf16
-    roundings, fp32 silu rounded to bf16). Run: `.venv/bin/python run_test.py`.
+    roundings, fp32 silu rounded to bf16); re-run at MATRIX_LANES = 4: 64/64
+    bit-exact. Run: `.venv/bin/python run_test.py`.
   in_loop_verification: >
     tb_mlp_unit_inloop.py: real layer-0 shared-MLP inputs and weights from a
     Granite 4.0-H-350M forward pass (4 tokens, each MLP is token-independent).
@@ -121,7 +124,9 @@ characteristics:
     0/3072 outside 1e-3 (bit-exact); DUT vs the model's MLP output: max abs
     7.8e-3, max rel 2.8e-2, 0/3072 outside 2e-2 (differences are ATen's
     blocked-GEMM accumulation order over the 2048-term down projection).
-    Run: `.venv/bin/python run_test.py inloop` (~44 min).
+    Re-run with MATRIX_LANES = 4 (branch opt/lanes-rollout): identical results
+    and 0/3072 outside, in ~38 min (~1.25M cycles/token, was ~4.8M). Run:
+    `.venv/bin/python run_test.py inloop`.
   formal_verification: >
     formal/bmc.sby: BMC depth 260 (smtbmc boolector) on a HIDDEN=8/INTER=4
     instance with the FP datapaths abstracted (matrix_unit stub with the exact
