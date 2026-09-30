@@ -194,6 +194,11 @@ The Python model is the source of truth. Capture activations with
 
 ## Remaining Work
 
+- **Migrate the outer units to upstream's pipelined `fp_unit`** (new per-op
+  latencies + in_valid handshake; `ITER_DIVSQRT` default 1). Until this is
+  done the outer repo stays pinned at library commit `6907045`; see
+  `src/fp_unit/description.yaml` (`migration_note`). The merged library works
+  on the library side (conflict resolution committed as `0a75e4c`).
 - Next optimization target (recorded in `src/matrix_unit/description.yaml` as
   `current_dut` + `src/matrix_unit/TODO.md`): roll LANES=4 out to every
   matrix_unit consumer, then pipeline the multiplier (`fp_mul_pipe2`).

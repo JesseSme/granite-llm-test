@@ -6,3 +6,20 @@ name: floating_point_unit
 description: An IEEE 754-2019 accurate floating_point_unit.
 
 location: ../../systemverilog_fp_unit
+
+migration_note: >
+  The FP library submodule now has upstream's pipelined fp_unit (commit
+  0a75e4c, "Fmax 250MHz"): the op datapaths run with fixed per-operation
+  latencies and are started by in_valid (ITER_DIVSQRT now defaults to 1).
+  This CHANGES the module protocol: the outer units currently assume the
+  previous 1-cycle registered output with always-present operands, so moving
+  the outer gitlink past 6907045 breaks them (demonstrated: the
+  residual_adder_unit golden test fails 6137/6144).
+  TO MIGRATE: for each unit, drive in_valid on each operand presentation and
+  wait the documented per-op latency before reading y (and/or use the new
+  *_pipe modules), keeping every unit bit-exact against its golden sample;
+  re-run unit + in-loop + formal per unit. The library's own suites also need
+  the four Verilator-5.051-only warning classes waived (IMPLICITSTATIC,
+  MULTIDRIVEN, VARHIDDEN, MULTITOP) to run on this machine (the library pins
+  Verilator 5.020).
+  Until then the outer repo stays pinned at 6907045 (pre-upstream-pull).
