@@ -140,35 +140,33 @@ skipping the 0+p0 seed (differs for -0).
       matrix_unit stays 137 (the fp_add_pipe2 accumulator is now the sole
       critical path).
 
-## Next optimization target: realize the matrix gains in the dependent units
+## Rollout: realize the matrix gains in the dependent units (DONE)
 
-Branch to create: `opt/lanes-rollout` (from main).
+Branch: `opt/lanes-rollout` (from `opt/fp-mul-pipe2`). Every consumer adds a
+parent-level `localparam int MATRIX_LANES = 4` and passes it to its matrix
+instances: attention_unit (Q/K/V/O), SwiGLU_unit (gate+up and down),
+mamba2_unit (in_proj/out_proj), output_projection_unit. No interface changed;
+the AXI handshake hides the extra internal latency and all outputs stay
+bit-identical (each lane keeps the exact sequential fp32 accumulation order).
 
-Why: matrix_unit now offers LANES (parallel output rows, bit-exact) and a
-2-stage pipelined adder (P2), but every consumer still uses the default
-LANES=1, so the end-to-end gains are dormant. The linear layers dominate a
-token; pre-optimization matrix cycles per token: LM head 77.4M, gate+up
-3.16M, in_proj 2.60M, down 1.58M, q/o 1.19M, out_proj 1.18M, k/v 0.40M.
+Results (vs the pre-rollout cycles per token): attention ~1.6M -> ~0.4M
+(measured, 9-token layer-10 in-loop), MLP ~4.8M -> ~1.25M (measured, 4-token
+layer-0 in-loop), mamba2 ~5.1M -> ~2.3M (measured, 5-token layer-0 in-loop),
+LM head 77.4M -> ~19.4M cycles (projection estimate).
 
-Steps:
-1. Set LANES=4 at every consumer: attention_unit (Q/K/V/O), SwiGLU_unit
-   (gate+up and down), mamba2_unit (in_proj/out_proj), output_projection_unit.
-   Prefer a parent-level localparam so the parameter is visible per unit.
-   Do NOT change any interface; the matrix AXI handshake already hides the
-   extra internal latency (its outputs are bit-identical).
-2. Expected: matrix cycles per instance divide by ~4. Evidence from the
-   matrix unit test (8 vectors, busy cycles): 4755 -> 1299 at LANES=4.
-   LM head 77.4M -> ~19.4M; gate+up 3.16M -> ~0.8M; in_proj 2.60M -> ~0.65M.
-3. Verification per unit: `verilator --lint-only -Wall` clean; the unit
-   golden test bit-exact (`run_test.py`); one in-loop per unit (recommended;
-   the unit goldens are the hard bit-exact gate, the in-loop proves it
-   against the real model). Those in-loop runs use real layer weights and
-   take a while - run ONE at a time (16 GB RAM, one build/sim at a time).
-4. Keep LANES=1 as the matrix_unit default and keep the small-config unit
-   tests unchanged; only the DUT configurations should use LANES=4.
-5. If some unit is not bit-exact at LANES=4, stop and debug the lane mapping
-   there (packed weight words store LANES consecutive rows per word; lane j
-   must compute row word*LANES + j with its own accumulator).
+Verification evidence (branch `opt/lanes-rollout`, commit 04af3b1):
+- lint clean for all five consumers (each run_test.py build list).
+- unit goldens bit-exact: attention 64/64, mlp 64/64, mamba2 32/32 (masked
+  PROJ=14 tail), output_projection 256/256 (max abs 0.0 everywhere).
+- in-loop: attention max abs 0.0 / 0/6912 outside 1e-3; mlp sequential
+  emulation 0/3072 outside 1e-3 (max abs 0.0) and model 0/3072 outside 2e-2
+  (max abs 7.8e-3); mamba2 max abs 3.906e-03 / 0/3840 outside 2e-2 /
+  non-finite 0; output_projection 1024/1024 bit-exact.
+- granite_layer end-to-end re-run: see the commit after 04af3b1.
+
+Constraints held: bit-exactness absolute; no interface changes; LANES=1 stays
+the matrix_unit default; small-config unit tests unchanged; one heavy build at
+a time.
 
 Follow-up after the rollout: pipeline the multiplier. DONE (see the P5 entry
 above): `fp_mul_pipe2` landed in the fp library (commit 83f470e), cuts the

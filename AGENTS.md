@@ -26,17 +26,17 @@ Key config constants (must appear exactly in the RTL):
 |---|---|
 | `embedding_lookup_unit` | verified: unit + in-loop 16896/16896 bit-exact; formal PASS |
 | `residual_adder_unit` | verified: unit 6144/6144, in-loop 52224/52224 bit-exact; fp32 datapath with 0.246 built in; formal PASS |
-| `matrix_unit` | verified: in-loop q/k_proj bit-exact; formal PASS; rare (<0.1%) 1-ULP ATen blocked-GEMM order differences documented. Optimized bit-exactly: LANES parallel output rows (8-vector busy cycles 4755 -> 1299 at LANES=4), P2 2-stage pipelined adder + 2 interleaved accumulator contexts, operand-register pipeline; flattened ltp 221 -> 137 (~1.54x Fmax proxy) |
+| `matrix_unit` | verified: in-loop q/k_proj bit-exact; formal PASS; rare (<0.1%) 1-ULP ATen blocked-GEMM order differences documented. Optimized bit-exactly: LANES parallel output rows (8-vector busy cycles 4755 -> 1299 at LANES=4), P2 2-stage pipelined adder + 2 interleaved accumulator contexts, operand-register pipeline, P5 2-stage pipelined multiplier `fp_mul_pipe2` (148 -> 74 ltp levels); flattened ltp 221 -> 137 (~1.54x Fmax proxy, adder-limited) |
 | `SSM_unit` | verified: unit, in-loop max abs 4.5e-8; formal depth 140 PASS |
-| `attention_unit` | verified: unit 1536/1536 bit-exact, in-loop bit-exact vs layer-10 eager attention; formal depth 220 PASS |
-| `mlp_unit` (`SwiGLU_unit/`) | verified: unit bit-exact, in-loop bit-exact + 0/3072 outside 2e-2 vs model; formal depth 260 PASS |
-| `mamba2_unit` | verified: full-config unit 768/768 bit-exact, in-loop 0/3840 outside 2e-2; formal depth 260 PASS |
+| `attention_unit` | verified: unit 1536/1536 bit-exact, in-loop bit-exact vs layer-10 eager attention; formal depth 220 PASS; Q/K/V/O at MATRIX_LANES=4: unit 64/64, in-loop max abs 0.0/0 out of 6912, ~0.4M cycles/token (was ~1.6M) |
+| `mlp_unit` (`SwiGLU_unit/`) | verified: unit bit-exact, in-loop bit-exact + 0/3072 outside 2e-2 vs model; formal depth 260 PASS; gate+up/down at MATRIX_LANES=4: unit 64/64, in-loop identical results at ~1.25M cycles/token (was ~4.8M) |
+| `mamba2_unit` | verified: full-config unit 768/768 bit-exact, in-loop 0/3840 outside 2e-2; formal depth 260 PASS; in_proj/out_proj at MATRIX_LANES=4: unit 32/32, in-loop max abs 3.906e-03/0 out of 3840 at ~2.3M cycles/token (was ~5.1M) |
 | `conv1d_unit` | verified: unit 49152/49152 bit-exact, in-loop 13824/13824 bit-exact; formal depth 120 PASS |
 | `RMSNorm_unit` | verified: unit + in-loop PASS after the fp32 datapath fix; its formal files still need `fp32_to_bf16_round.sv` added |
 | `softmax_unit` | verified: in-loop 3888/3888 rows, formal depth 120 PASS; LUT exp is coarse (max rel 0.209) - attention uses `attn_softmax_seq` (accurate) instead |
 | `sigmoid_unit`, `SiLU_unit` | verified: formal depth 10 PASS; LUT-based approximations (<0.5% sigmoid error), not used on fp32-critical paths |
-| `output_projection_unit` | verified: unit bit-exact 256/256, in-loop bit-exact 1024/1024 on 512 sampled vocab rows (the 77M-param table cannot be simulated in full), formal depth 60 PASS |
-| `granite_layer` | verified: single-token real-weight in-loop PASS (max abs 0.0078); end-to-end hybrid PASS |
+| `output_projection_unit` | verified: unit bit-exact 256/256, in-loop bit-exact 1024/1024 on 512 sampled vocab rows (the 77M-param table cannot be simulated in full), formal depth 60 PASS; LM head at MATRIX_LANES=4: same bit-exact results, projection ~77.4M -> ~19.4M cycles |
+| `granite_layer` | verified: single-token real-weight in-loop PASS (max abs 0.0078); end-to-end hybrid PASS (argmax 220, top-5 [220, 198, 11, 16, 7]); both re-run after the LANES=4 / fp_mul_pipe2 optimizations with identical results |
 | `fp_unit` | spec only - implementation is the external `systemverilog_fp_unit/` git repository, which also provides `fp_add_pipe2` (the 2-stage pipelined fp32 adder used by matrix_unit) |
 
 ## Numerics rules (learned the hard way)
@@ -81,10 +81,13 @@ Measured cost (Verilator, ~3-6k cycles/s wall):
 A full 32-layer run is therefore **not** simulatable. Use `granite_layer`
 (one layer, one token, real weights) and `tb_granite_layer_e2e.py` (one RTL
 layer + the other 31 layers in software, comparing final logits), which is the
-accepted end-to-end verification. Latest result: same argmax and top-5
-prediction as the software baseline. Note: the matrix_unit optimizations (LANES=4,
-P2 pipelined adder) reduce the ~87.5M matrix cycles per token to roughly a
-quarter; the per-path cycle estimates above predate them.
+accepted end-to-end verification. Latest result (after the LANES=4 rollout and
+the pipelined multiplier): same argmax 220 and top-5 [220, 198, 11, 16, 7] as
+the software baseline. Note: the matrix_unit optimizations (LANES=4, pipelined
+adder/multiplier) are now active in every consumer and reduce the ~87.5M
+matrix cycles per token to roughly a quarter; the per-path cycle estimates
+above predate them (measured: attention ~0.4M, MLP ~1.25M, mamba2 ~2.3M
+cycles/token; LM head ~19.4M estimated).
 
 ## Open-Source Toolchain
 
@@ -196,20 +199,17 @@ The Python model is the source of truth. Capture activations with
 
 - **Migrate the outer units to upstream's pipelined `fp_unit`** (new per-op
   latencies + in_valid handshake; `ITER_DIVSQRT` default 1). Until this is
-  done the outer repo stays pinned at library commit `6907045`; see
-  `src/fp_unit/description.yaml` (`migration_note`). The merged library works
-  on the library side (conflict resolution committed as `0a75e4c`).
-- Next optimization target (recorded in `src/matrix_unit/description.yaml` as
-  `current_dut` + `src/matrix_unit/TODO.md`): roll LANES=4 out to every
-  matrix_unit consumer, then pipeline the multiplier (`fp_mul_pipe2`).
+  done the outer repo stays pinned at library commit `83f470e` (the
+  `opt/fp-mul-pipe2` tip; `fp_mul_pipe2` merged into library `master` as
+  `11c459c`); see `src/fp_unit/description.yaml` (`migration_note`).
 - Attention-type variant of `granite_layer` (GraniteMoeHybridAttention layers
   at indices 10, 13, 17, 27).
 - Wrapper-level formal properties for `granite_layer`.
 - Audit remaining units for bf16-vs-fp32 datapath gaps (`softmax_unit` LUT exp
   is the known coarse one; attention already uses the accurate variant).
-- Fix the stale "mamba2 unit" PASSED label printed by
-  `granite_layer/run_test.py`.
-- Optional: multi-token runs of `granite_layer` and the hybrid e2e test.
+- Optional: multi-token runs of `granite_layer` and the hybrid e2e test,
+  and a 3-stage adder (`fp_add_pipe3`) to break the 137-level matrix
+  critical path further.
 
 ## Notes
 
