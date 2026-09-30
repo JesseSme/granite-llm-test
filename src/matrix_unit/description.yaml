@@ -206,3 +206,18 @@ optimization:
     ~1.54x; busy cycles unchanged (4755/1299/643). Remaining opportunities:
     P5 (direct fp_mul instance / specialised bf16 multiplier), P6 (overlap OUT
     with the next pass, tie off constant mode/rm).
+
+current_dut: matrix_unit
+
+next_optimization: >
+  Realize the matrix_unit gains end-to-end. Every consumer still instantiates
+  the matrix with the default LANES=1, so the committed optimizations are
+  dormant. PLAN: create branch opt/lanes-rollout, set LANES=4 at every
+  consumer (attention_unit Q/K/V/O, SwiGLU_unit gate+up and down, mamba2_unit
+  in_proj/out_proj, output_projection_unit), keep every interface unchanged
+  (the AXI handshake hides the extra latency), and verify each unit: lint
+  clean + unit golden bit-exact + one in-loop per unit. THEN (follow-up)
+  pipeline the multiplier with a new matrix-only fp_mul_pipe2 module (fp_mul
+  is ~148 ltp levels, co-critical with the 137-level pipelined adder).
+  Full instructions, expected cycle counts and verification requirements are
+  in TODO.md, section "Next optimization target". Bit-exactness is absolute.

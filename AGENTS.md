@@ -194,6 +194,9 @@ The Python model is the source of truth. Capture activations with
 
 ## Remaining Work
 
+- Next optimization target (recorded in `src/matrix_unit/description.yaml` as
+  `current_dut` + `src/matrix_unit/TODO.md`): roll LANES=4 out to every
+  matrix_unit consumer, then pipeline the multiplier (`fp_mul_pipe2`).
 - Attention-type variant of `granite_layer` (GraniteMoeHybridAttention layers
   at indices 10, 13, 17, 27).
 - Wrapper-level formal properties for `granite_layer`.

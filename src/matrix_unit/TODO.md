@@ -121,3 +121,44 @@ skipping the 0+p0 seed (differs for -0).
       change. Evidence: 50M-vector old-vs-new equivalence (0 mismatches); library
       make smoke/regress PASS at all 6 widths; outer residual_adder 6144/6144,
       matrix_unit 128/128, RMSNorm PASS; fp_add ltp 218 -> 208.
+
+## Next optimization target: realize the matrix gains in the dependent units
+
+Branch to create: `opt/lanes-rollout` (from main).
+
+Why: matrix_unit now offers LANES (parallel output rows, bit-exact) and a
+2-stage pipelined adder (P2), but every consumer still uses the default
+LANES=1, so the end-to-end gains are dormant. The linear layers dominate a
+token; pre-optimization matrix cycles per token: LM head 77.4M, gate+up
+3.16M, in_proj 2.60M, down 1.58M, q/o 1.19M, out_proj 1.18M, k/v 0.40M.
+
+Steps:
+1. Set LANES=4 at every consumer: attention_unit (Q/K/V/O), SwiGLU_unit
+   (gate+up and down), mamba2_unit (in_proj/out_proj), output_projection_unit.
+   Prefer a parent-level localparam so the parameter is visible per unit.
+   Do NOT change any interface; the matrix AXI handshake already hides the
+   extra internal latency (its outputs are bit-identical).
+2. Expected: matrix cycles per instance divide by ~4. Evidence from the
+   matrix unit test (8 vectors, busy cycles): 4755 -> 1299 at LANES=4.
+   LM head 77.4M -> ~19.4M; gate+up 3.16M -> ~0.8M; in_proj 2.60M -> ~0.65M.
+3. Verification per unit: `verilator --lint-only -Wall` clean; the unit
+   golden test bit-exact (`run_test.py`); one in-loop per unit (recommended;
+   the unit goldens are the hard bit-exact gate, the in-loop proves it
+   against the real model). Those in-loop runs use real layer weights and
+   take a while - run ONE at a time (16 GB RAM, one build/sim at a time).
+4. Keep LANES=1 as the matrix_unit default and keep the small-config unit
+   tests unchanged; only the DUT configurations should use LANES=4.
+5. If some unit is not bit-exact at LANES=4, stop and debug the lane mapping
+   there (packed weight words store LANES consecutive rows per word; lane j
+   must compute row word*LANES + j with its own accumulator).
+
+Follow-up after the rollout: pipeline the multiplier.
+`fp_mul` is ~148 ltp levels and co-critical with the 137-level pipelined
+adder. Add a matrix-only `fp_mul_pipe2` (same equations, internal registers,
+2-cycle latency; same pattern as `fp_add_pipe2`, do not change `fp_mul`'s
+default behaviour), verify with a 20M-vector equivalence run vs `fp_mul`,
+unit goldens bit-exact, in-loop bit-exact, formal PASS, and report the ltp /
+busy-cycle changes. Submodule commits first, then the outer pointer.
+
+Constraints: bit-exactness is absolute; no interface changes; update
+description.yaml/TODO per unit as they land; run one heavy build at a time.
