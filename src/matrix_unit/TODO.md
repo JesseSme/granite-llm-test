@@ -93,5 +93,31 @@ skipping the 0+p0 seed (differs for -0).
       tail 32x6 LANES=4 643. Cycle model: per LANES-block
       IN+4+LANES cycles (MAC_FILL + IN MAC + ADD_LAST + BIAS + STORE + LANES
       output beats), i.e. IN+5 per row at LANES=1.
-- [ ] P2 pipelined fp_add (P stages) + P accumulator contexts per lane
-- [ ] P4 balanced leading-one detectors in fp_add/fp_mul (fp library)
+- [x] P2 pipelined fp_add (2 stages) + 2 interleaved accumulator contexts per
+      lane — new fp-library module `fp_add_pipe2.sv`: register bank after the
+      exponent alignment plus output register, documented 2-cycle latency,
+      bit-identical to `fp_add` with OP_ADD/RM_RNE. `matrix_unit` now computes
+      ROWSPW = 2*LANES rows per pass: each lane keeps two interleaved contexts
+      (rows word*ROWSPW+lane and word*ROWSPW+LANES+lane) that submit on
+      alternating MAC slots, so the MAC issue rate stays 1/cycle/lane; the
+      adder output register itself is each context's accumulator (it is updated
+      every other cycle), and one MUL per lane alternates products between the
+      contexts. Weight words are packed ROWSPW wide, rows still stream in
+      order, and the tail mask is generalized to OUT_FEATURES % ROWSPW.
+      Evidence: fp_add_pipe2 vs fp_add equivalence harness (Verilator C++):
+      20,000,000 biased-random vectors + zeros, 0 mismatches; lint clean
+      (default, LANES=4, tail, odd LANES); unit tests bit-exact 32x16 LANES=1
+      128/128, 32x16 LANES=4 128/128, 32x6 LANES=4 (tail) 48/48; busy cycles
+      4755/1299/643, identical to P1 (same cycles per row by construction);
+      in-loop q_proj 6144/6144 and k_proj 2048/2048 bit-exact (max abs 0.0);
+      formal/bmc.sby and formal/bmc_lanes.sby depth 40 PASS (new anyseq stub
+      `formal/fp_add_pipe2_stub.sv`); Yosys ltp -noff on the flattened
+      matrix_unit (32x16, LANES=1, flatten before synth so the constant op
+      mux prunes unused datapaths): 211 -> 137 levels (fp_add 208 -> fp_add_pipe2
+      137), ~1.54x Fmax proxy.
+- [x] P4 balanced leading-one detectors in fp_add/fp_mul (fp library, branch
+      `opt/lzc-balanced` commit 2c013aa) — one-hot prefix reduction + constant
+      mask encoder in bitlen/lpos/pbitlen, function-identical, no latency
+      change. Evidence: 50M-vector old-vs-new equivalence (0 mismatches); library
+      make smoke/regress PASS at all 6 widths; outer residual_adder 6144/6144,
+      matrix_unit 128/128, RMSNorm PASS; fp_add ltp 218 -> 208.

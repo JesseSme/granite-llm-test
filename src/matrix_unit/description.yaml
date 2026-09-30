@@ -117,44 +117,59 @@ interface:
       width: 1
       description: Unit is computing/streaming (input not accepted)
 
-max_clock_speed: 200 MHz (estimated; binary32 fp_unit MUL/ADD path with the
-  accumulator feedback through the fp32 adder — same bound as residual_adder_unit;
-  no STA cell library available)
+max_clock_speed: >
+  ~300 MHz (ltp-proxy estimate; the flattened critical path dropped from 221
+  (master) / 211 (post-P4) to 137 logic levels with the 2-stage fp_add_pipe2
+  accumulator, ~1.54x the previous proxy bound of 200 MHz; no STA cell library
+  available)
 
 characteristics:
   latency: >
-    Per LANES-block of LANES output rows: IN_FEATURES + 4 + LANES busy cycles
-    (MAC_FILL operand load, IN_FEATURES MAC cycles, final product add, bias add,
-    one STORE cycle latching the biased sums, then LANES output beats) plus
-    handshake stalls; at LANES=1 that is IN_FEATURES + 5 per row. For 768->768
-    at LANES=4: ~4x fewer cycles per vector (~148k vs ~593k at LANES=1).
-  throughput: LANES multiply-accumulates per cycle (one per lane; each accumulator
-    held in its lane's fp32 adder output register, no stalls between MACs)
+    Per ROWSPW = 2*LANES-row pass: 1 MAC_FILL cycle + (2*IN_FEATURES + 6) MAC
+    slots (two 0+0 context seeds, one accumulate slot per element per context,
+    two bias slots, two result-latch slots) + 1 STORE cycle + 2*LANES output
+    beats, i.e. the same IN_FEATURES + 4 + LANES cycles per LANES output rows
+    as the single-context schedule (IN_FEATURES + 5 per row at LANES=1), plus
+    handshake stalls. For 768->768 at LANES=4: ~4x fewer cycles per vector
+    (~148k vs ~593k at LANES=1).
+  throughput: LANES multiply-accumulates per cycle (one per lane; two interleaved
+    accumulator contexts alternate through each lane's 2-stage fp_add_pipe2, so
+    there are no stalls between MACs)
   resource_usage: >
-    Parameterized (W_WORDS x IN_FEATURES) x (LANES x 16)-bit weight RAM,
-    N_ROWS x 16-bit bias RAM (rows padded to a LANES multiple),
+    Parameterized (W_WORDS x IN_FEATURES) x (2*LANES x 16)-bit weight RAM,
+    N_ROWS x 16-bit bias RAM (rows padded to a ROWSPW multiple),
     IN_FEATURES x 16-bit input buffer, LANES x (one binary32 fp_unit MUL + one
-    binary32 fp_unit ADD + one fp32_to_bf16_round unit), plus a registered x
-    operand (mul_a_q) shared by the lanes and LANES registered weight operands
-    (mul_b_q[l]) between the weight memory and the multipliers.
+    binary32 fp_add_pipe2 2-stage adder + two fp32_to_bf16_round units + two
+    32-bit context result registers), plus a registered x operand (mul_a_q)
+    shared by the lanes and LANES registered weight operands (mul_b_q[l])
+    between the weight memory and the multipliers.
   notes: >
     AXI-Stream contract: the input vector is IN_FEATURES beats with tlast on the
     final beat (the counter bound also ends streams that omit tlast); the output
     vector is OUT_FEATURES beats with tlast on the final beat and is held stable
     under downstream backpressure. Weights must be loaded before streaming.
-    The multiplier operands are registered: MAC_FILL loads element 0 and each
-    MAC cycle prefetches element i+1, so the MUL output during MAC(i) is still
-    the product of element i-1 and the sequential accumulation order is
-    unchanged. The biased sums are latched into out_buf for the output beats
-    (registered tvalid, data stable under backpressure). The final LANES-block
-    masks to OUT_FEATURES % LANES valid rows.
+    Each lane carries two accumulator contexts through the shared 2-cycle adder
+    (context A on even MAC slots, context B on odd slots); the adder output
+    register is each context's accumulator because it is only overwritten by
+    that context's next submission. The multiplier operands are registered and
+    prefetched two slots ahead (the MUL has an operand register + output
+    register), the products alternate A/B per input element, and the per-row add
+    sequence is exactly the single-context one (0+0 seed, products in order,
+    bias last), so every output row is bit-identical to the LANES=1, one-context
+    schedule. final_a/final_b latch the two biased sums per lane and the STORE
+    stage places them in row order in out_buf (registered tvalid, data stable
+    under backpressure). The final pass masks to OUT_FEATURES % ROWSPW valid
+    rows.
   unit_verification: >
     tb_matrix_unit.py, 8 vectors, random input bubbles, randomized output stalls
     and tlast checked on every beat, vs the sequential-fp32 golden sample:
-    - IN=32 OUT=16 LANES=1: 128/128 bit-exact (4755 busy cycles, 8 vectors;
-      rebuild-verified)
+    - IN=32 OUT=16 LANES=1: 128/128 bit-exact (4755 busy cycles, 8 vectors)
     - IN=32 OUT=16 LANES=4: 128/128 bit-exact (1299 busy cycles; ~3.7x fewer)
     - IN=32 OUT=6 LANES=4 (masked tail): 48/48 bit-exact (643 busy cycles)
+    Busy cycles are identical to the pre-P2 single-context schedule (the cycle
+    model is unchanged); the pipelined adder was additionally checked against
+    fp_add by a standalone Verilator C++ harness over 20,000,000 biased-random
+    vectors and zeros (0 mismatches in y): fp_add_pipe2 is bit-identical.
     Run: `.venv/bin/python run_test.py`, `... run_test.py lanes4`, `... tail`.
   in_loop_verification: >
     tb_matrix_unit_inloop.py: real Granite Linear layers. q_proj (768x768) of
@@ -162,12 +177,13 @@ characteristics:
     (768x256) of layer 10: 2048/2048 bit-exact (100%, max abs error 0.0).
     Run: `.venv/bin/python run_test.py inloop`.
   formal_verification: >
-    formal/bmc.sby (SymBiYosys BMC, depth 40, fp_units abstracted via anyseq
-    stubs) proves: s_axis_tready == !busy, output valid only while busy, tlast
-    only on the final output beat, busy rises only after an accepted input beat,
-    and exactly OUT_FEATURES output beats per input vector. Run: sby -f bmc.sby.
+    formal/bmc.sby (SymBiYosys BMC, depth 40, fp_units and fp_add_pipe2
+    abstracted via anyseq stubs fp_unit_stub.sv / fp_add_pipe2_stub.sv) proves:
+    s_axis_tready == !busy, output valid only while busy, tlast only on the
+    final output beat, busy rises only after an accepted input beat, and exactly
+    OUT_FEATURES output beats per input vector. Run: sby -f bmc.sby.
     formal/bmc_lanes.sby re-runs the same properties with LANES=4 and
-    OUT_FEATURES=2 < LANES (masked-tail corner); depth 40 PASS.
+    OUT_FEATURES=2 < ROWSPW=8 (masked-tail corner); depth 40 PASS.
 
 optimization:
   branch: opt/matrix-unit
@@ -181,7 +197,12 @@ optimization:
     plus P interleaved accumulator contexts; P4 balanced leading-one detectors.
   out_of_scope: any reassociation, fp_fma fusion, wide exact accumulator, or
     removing the 0+p0 seed (all change results).
-  status: P3 (registered multiplier operands) and P1 (LANES parallel output
-    lanes, default 1, verified at LANES=1/4 and with a masked tail) implemented
-    and verified; next P2 (pipelined fp_add + interleaved accumulator contexts)
-    and P4 (balanced leading-one detectors in the fp library).
+  status: >
+    P3, P1 and P2 (2-stage fp_add_pipe2 + two interleaved accumulator contexts
+    per lane) implemented, verified bit-exact at LANES=1/4 and with a masked
+    tail, in-loop, and formally; P4 (balanced leading-one detectors, library
+    commit 2c013aa) implemented and verified. Fmax proxy (Yosys ltp -noff,
+    flattened matrix_unit 32x16 LANES=1): 221 -> 211 (P4) -> 137 (P2) levels,
+    ~1.54x; busy cycles unchanged (4755/1299/643). Remaining opportunities:
+    P5 (direct fp_mul instance / specialised bf16 multiplier), P6 (overlap OUT
+    with the next pass, tie off constant mode/rm).
