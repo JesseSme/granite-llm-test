@@ -26,7 +26,7 @@ Key config constants (must appear exactly in the RTL):
 |---|---|
 | `embedding_lookup_unit` | verified: unit + in-loop 16896/16896 bit-exact; formal PASS |
 | `residual_adder_unit` | verified: unit 6144/6144, in-loop 52224/52224 bit-exact; fp32 datapath with 0.246 built in; formal PASS |
-| `matrix_unit` | verified: in-loop q/k_proj bit-exact; formal PASS; rare (<0.1%) 1-ULP ATen blocked-GEMM order differences documented |
+| `matrix_unit` | verified: in-loop q/k_proj bit-exact; formal PASS; rare (<0.1%) 1-ULP ATen blocked-GEMM order differences documented. Optimized bit-exactly: LANES parallel output rows (8-vector busy cycles 4755 -> 1299 at LANES=4), P2 2-stage pipelined adder + 2 interleaved accumulator contexts, operand-register pipeline; flattened ltp 221 -> 137 (~1.54x Fmax proxy) |
 | `SSM_unit` | verified: unit, in-loop max abs 4.5e-8; formal depth 140 PASS |
 | `attention_unit` | verified: unit 1536/1536 bit-exact, in-loop bit-exact vs layer-10 eager attention; formal depth 220 PASS |
 | `mlp_unit` (`SwiGLU_unit/`) | verified: unit bit-exact, in-loop bit-exact + 0/3072 outside 2e-2 vs model; formal depth 260 PASS |
@@ -37,7 +37,7 @@ Key config constants (must appear exactly in the RTL):
 | `sigmoid_unit`, `SiLU_unit` | verified: formal depth 10 PASS; LUT-based approximations (<0.5% sigmoid error), not used on fp32-critical paths |
 | `output_projection_unit` | verified: unit bit-exact 256/256, in-loop bit-exact 1024/1024 on 512 sampled vocab rows (the 77M-param table cannot be simulated in full), formal depth 60 PASS |
 | `granite_layer` | verified: single-token real-weight in-loop PASS (max abs 0.0078); end-to-end hybrid PASS |
-| `fp_unit` | spec only - implementation is the external `systemverilog_fp_unit/` git repository |
+| `fp_unit` | spec only - implementation is the external `systemverilog_fp_unit/` git repository, which also provides `fp_add_pipe2` (the 2-stage pipelined fp32 adder used by matrix_unit) |
 
 ## Numerics rules (learned the hard way)
 
@@ -82,7 +82,9 @@ A full 32-layer run is therefore **not** simulatable. Use `granite_layer`
 (one layer, one token, real weights) and `tb_granite_layer_e2e.py` (one RTL
 layer + the other 31 layers in software, comparing final logits), which is the
 accepted end-to-end verification. Latest result: same argmax and top-5
-prediction as the software baseline.
+prediction as the software baseline. Note: the matrix_unit optimizations (LANES=4,
+P2 pipelined adder) reduce the ~87.5M matrix cycles per token to roughly a
+quarter; the per-path cycle estimates above predate them.
 
 ## Open-Source Toolchain
 
@@ -195,7 +197,6 @@ The Python model is the source of truth. Capture activations with
 - Attention-type variant of `granite_layer` (GraniteMoeHybridAttention layers
   at indices 10, 13, 17, 27).
 - Wrapper-level formal properties for `granite_layer`.
-- Add `fp32_to_bf16_round.sv` to `RMSNorm_unit/formal` file lists and re-run.
 - Audit remaining units for bf16-vs-fp32 datapath gaps (`softmax_unit` LUT exp
   is the known coarse one; attention already uses the accurate variant).
 - Fix the stale "mamba2 unit" PASSED label printed by

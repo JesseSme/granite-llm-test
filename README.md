@@ -146,7 +146,7 @@ bash -c 'ulimit -v 6000000; sby -f bmc.sby'
 |---|---|
 | `embedding_lookup_unit` | unit + in-loop 16896/16896 bit-exact; formal PASS |
 | `residual_adder_unit` | unit 6144/6144, in-loop 52224/52224; formal PASS (fp32 + 0.246) |
-| `matrix_unit` | in-loop q/k proj bit-exact; formal PASS (rare 1-ULP ATen order) |
+| `matrix_unit` | in-loop q/k proj bit-exact; formal PASS; optimized bit-exactly: LANES parallel output rows (~3.7x fewer busy cycles at LANES=4) and a P2 pipelined adder (ltp 221 -> 137) |
 | `SSM_unit` | unit, in-loop max abs 4.5e-8; formal depth 140 PASS |
 | `attention_unit` | unit 1536/1536 bit-exact, in-loop bit-exact; formal depth 220 |
 | `mlp_unit` / `SwiGLU_unit` | unit bit-exact, in-loop 0/3072 outside 2e-2; formal 260 |
@@ -164,7 +164,9 @@ Measured with Verilator at ~3–6k cycles/s: weight load 1 beat/cycle
 (Mamba2 layer ~3.8M, full decoder layer ~8.5M), SSM ~1.19M cycles/token,
 attention ~1.6M, MLP ~4.8M, Mamba2 layer ~5.1M, full 32-layer token ~169M
 (~8–15 h) plus ~350M weight-load beats. Hence the accepted end-to-end
-verification is `granite_layer` + `tb_granite_layer_e2e.py`.
+verification is `granite_layer` + `tb_granite_layer_e2e.py`. (The
+`matrix_unit` optimizations reduce the linear-layer share of this: with
+`LANES=4` the ~87.5M matrix cycles per token drop to roughly a quarter.)
 
 ## Numerics rules
 
