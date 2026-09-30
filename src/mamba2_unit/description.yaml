@@ -109,29 +109,33 @@ interface:
     width: 1
     description: Unit is processing/streaming a token (input not accepted)
 
-max_clock_speed: 150 MHz (estimated; the critical path is the matrix_unit /
-  conv1d_unit / ssm_unit binary32 MAC path shared with those units plus the
-  gated-norm sequencer; no STA cell library available)
+max_clock_speed: 150 MHz (estimated; the previous bound was the matrix_unit
+  binary32 MAC loop (~200 MHz), now 2-stage pipelined (137 ltp proxy in
+  matrix_unit); the estimate now covers the conv1d_unit / ssm_unit binary32
+  MAC paths plus the gated-norm sequencer; no STA cell library available)
 
 characteristics:
   latency: >
     Weight load: 3,782,688 cycles at 768/1536 (in_proj 3376x768 + out_proj
     768x1536 + conv 1792x4 + 1792 + 1536 + 3x48 weights), ~25 ms at 150 MHz.
-    Per token: in_proj (768 feed + 3376 x 771 MAC) + conv (1792 x 17) + two
-    accurate SiLU passes (1792 + 1536 elements x ~30) + SSM frame (1840 feed +
-    1536 x ~771 recurrence) + gated norm (~1536 x 12) + out_proj (1536 feed +
-    768 x 1539 MAC) -> ~5.1M cycles per token (~34 ms at 150 MHz). The conv
-    history (3 previous B_C vectors) and the SSM state persist across tokens.
-  throughput: one token per ~5.1M cycles; the in_proj (2.6M) and out_proj
-    (1.2M) projections and the SSM recurrence (1.2M) dominate.
+    Per token: in_proj (768 feed + 3376/4 x 780 MAC with MATRIX_LANES = 4) +
+    conv (1792 x 17) + two accurate SiLU passes (1792 + 1536 elements x ~30) +
+    SSM frame (1840 feed + 1536 x ~771 recurrence) + gated norm (~1536 x 12) +
+    out_proj (1536 feed + 768/4 x 1548 MAC) -> measured ~2.3M cycles per token
+    in-loop (~15.4 ms at 150 MHz; was ~5.1M at LANES=1). The conv history
+    (3 previous B_C vectors) and the SSM state persist across tokens.
+  throughput: one token per ~2.3M cycles; the SSM recurrence (~1.2M) now
+    dominates, followed by the in_proj (~0.66M) and out_proj (~0.30M)
+    projections.
   resource_usage: >
     Sub-unit memories: in_proj weights 3376x768x16-bit (4.15 MB), out_proj
     768x1536x16-bit (1.89 MB), conv weights 1792x4 + bias, SSM state
     48x32x128 fp32 (0.8 MB) plus its own weight/buffers. This unit adds
     proj 3376x16, conv raw/out 1792x16 each, ssm 1536x32, gate-SiLU 1536x32,
     norm weight 1536x16, and 4 binary32 fp_unit instances (MUL/ADD/SQRT/DIV)
-    plus 2 bf16 rounders on top of the instantiated matrix_unit (x2),
-    conv1d_unit, ssm_unit and silu_seq sub-units.
+    plus 2 bf16 rounders on top of the instantiated matrix_unit (x2, with
+    MATRIX_LANES = 4 -> 8 pipelined MAC datapaths), conv1d_unit, ssm_unit and
+    silu_seq sub-units.
   notes: >
     AXI-Stream contract: HIDDEN bf16 beats per frame in and out, tlast on the
     final beat, output held under backpressure. One frame is one sequence
@@ -153,7 +157,8 @@ characteristics:
     768/768, max abs/rel error 0.0 (bit-exact). conv1d_unit now accumulates
     in fp32 with a single bfloat16 rounding (matching causal_conv1d_fn), which
     removed the ~1 bf16 ULP drift the SSM recurrence used to amplify.
-    Run: `.venv/bin/python run_test.py`.
+    The small config re-run with MATRIX_LANES = 4 (PROJ=14, masked tail):
+    32/32, max abs/rel error 0.0. Run: `.venv/bin/python run_test.py`.
   in_loop_verification: >
     tb_mamba2_unit_inloop.py: real layer-0 Granite 4.0-H-350M mixer inputs and
     weights; a prefix of the captured sequence is streamed (the conv history
@@ -166,7 +171,9 @@ characteristics:
     and the gated norm now uses eps=1e-5 (the model's rms_norm_eps) instead
     of 1e-6 - a sqrt(10) = 3.16x gain error at the tokens where
     RMS(x*silu(gate)) << sqrt(eps) and the norm is eps-dominated.
-    Run: `.venv/bin/python run_test.py inloop`.
+    Re-run with MATRIX_LANES = 4 (branch opt/lanes-rollout): identical
+    max abs/rel and 0/3840 outside 2e-2, ~66 min (measured ~2.3M cycles/token,
+    was ~5.1M). Run: `.venv/bin/python run_test.py inloop`.
   formal_verification: >
     formal/bmc.sby: BMC depth 260 (smtbmc boolector) on a HIDDEN=8/INTER=4/
     HEADS=2/HEAD_DIM=2/D_STATE=2 instance with every datapath abstracted by a

@@ -72,6 +72,10 @@ module attention_unit #(
   localparam int MAXK = NUM_KV_HEADS * MAX_SEQ * HEAD_DIM;
   localparam int KW   = $clog2(MAXK);
 
+  // Output-row parallelism of the Q/K/V/O projections (bit-exact; the AXI
+  // handshake hides the extra internal latency, see matrix_unit.sv).
+  localparam int MATRIX_LANES = 4;
+
   localparam logic [31:0] C_SCALE = 32'h3C800000;  // attention_multiplier 0.015625
 
   // ------------------------------------------------------------ storage
@@ -100,7 +104,8 @@ module attention_unit #(
   wire ld_v = load_en && (load_sel == 2'd2);
   wire ld_o = load_en && (load_sel == 2'd3);
 
-  matrix_unit #(.IN_FEATURES(HIDDEN), .OUT_FEATURES(QN)) u_q (
+  matrix_unit #(.IN_FEATURES(HIDDEN), .OUT_FEATURES(QN),
+                .LANES(MATRIX_LANES)) u_q (
     .clk(clk), .rst_n(rst_n), .load_en(ld_q),
     .load_out_idx(load_out_idx), .load_in_idx(load_in_idx),
     .load_wdata(load_wdata), .load_is_bias(1'b0),
@@ -111,7 +116,8 @@ module attention_unit #(
     .busy(/*unused*/)
   );
 
-  matrix_unit #(.IN_FEATURES(HIDDEN), .OUT_FEATURES(KN)) u_k (
+  matrix_unit #(.IN_FEATURES(HIDDEN), .OUT_FEATURES(KN),
+                .LANES(MATRIX_LANES)) u_k (
     .clk(clk), .rst_n(rst_n), .load_en(ld_k),
     .load_out_idx(load_out_idx), .load_in_idx(load_in_idx),
     .load_wdata(load_wdata), .load_is_bias(1'b0),
@@ -122,7 +128,8 @@ module attention_unit #(
     .busy(/*unused*/)
   );
 
-  matrix_unit #(.IN_FEATURES(HIDDEN), .OUT_FEATURES(KN)) u_v (
+  matrix_unit #(.IN_FEATURES(HIDDEN), .OUT_FEATURES(KN),
+                .LANES(MATRIX_LANES)) u_v (
     .clk(clk), .rst_n(rst_n), .load_en(ld_v),
     .load_out_idx(load_out_idx), .load_in_idx(load_in_idx),
     .load_wdata(load_wdata), .load_is_bias(1'b0),
@@ -133,7 +140,8 @@ module attention_unit #(
     .busy(/*unused*/)
   );
 
-  matrix_unit #(.IN_FEATURES(HIDDEN), .OUT_FEATURES(QN)) u_o (
+  matrix_unit #(.IN_FEATURES(HIDDEN), .OUT_FEATURES(QN),
+                .LANES(MATRIX_LANES)) u_o (
     .clk(clk), .rst_n(rst_n), .load_en(ld_o),
     .load_out_idx(load_out_idx), .load_in_idx(load_in_idx),
     .load_wdata(load_wdata), .load_is_bias(1'b0),

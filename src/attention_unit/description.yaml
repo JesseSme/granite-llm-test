@@ -119,10 +119,10 @@ interface:
     width: 1
     description: Unit is processing/streaming a token (input not accepted)
 
-max_clock_speed: 150 MHz (estimated; the critical path is the matrix_unit
-  binary32 MAC loop shared with matrix_unit (~200 MHz) plus the wide state
-  muxing/address generation of the attention sequencer; no STA cell library
-  available)
+max_clock_speed: 150 MHz (estimated; the previous bound was the matrix_unit
+  binary32 MAC loop (~200 MHz), which is now 2-stage pipelined (137 ltp proxy
+  in matrix_unit); the remaining estimate is the wide state muxing/address
+  generation of the attention sequencer; no STA cell library available)
 
 characteristics:
   latency: >
@@ -130,19 +130,22 @@ characteristics:
     1,572,864 at 768/4/64 (one bf16 weight per cycle, ~10.5 ms at 150 MHz).
     Per token: input frame (768) + broadcast feed to Q/K/V (768) + drains
     (768 + 256 + 256) + per-head score/softmax/context (~1.4k x 12) +
-    context feed (768) + O drain (768) plus the Q/O projection MAC time
-    (2 x 768 x (768+3)) -> measured ~1.6M cycles per token (~10.6 ms at
-    150 MHz). The position counter increments once per frame.
+    context feed (768) + O drain (768) plus the Q/O projection MAC time. The
+    projections use matrix_unit with MATRIX_LANES = 4 (four output rows per
+    pass, bit-identical), which cuts the projection part ~4x: measured
+    ~0.4M cycles per token in the in-loop run (~2.7 ms at 150 MHz), down from
+    ~1.6M at LANES=1. The position counter increments once per frame.
   throughput: >
-    One token per ~1.6M cycles; the Q and O projections dominate. K/V
+    One token per ~0.4M cycles; the Q and O projections still dominate. K/V
     projections run concurrently with the Q projection (the same input vector
     is broadcast to all three).
   resource_usage: >
     KV cache: 2 x KV_HEADS x MAX_SEQ x HEAD_DIM bf16 (32,768 words = 64 KB at
     4x64x64). Buffers: x/q/ctx 768 x 16-bit each. Four matrix_unit instances
-    (weights 2 x 768x768 + 2 x 256x768 = 1.57M x 16-bit = 3.1 MB), two
-    binary32 fp_unit instances (score MAC + scale) and attn_softmax_seq
-    (4 fp_unit + 1 fp_exp_seq + 1 fp32_to_bf16_round).
+    with MATRIX_LANES = 4 (weights 2 x 768x768 + 2 x 256x768 = 1.57M x
+    16-bit = 3.1 MB; 16 pipelined MAC datapaths total), two binary32 fp_unit
+    instances (score MAC + scale) and attn_softmax_seq (4 fp_unit +
+    1 fp_exp_seq + 1 fp32_to_bf16_round).
   notes: >
     AXI-Stream contract: a frame is HIDDEN bf16 beats with tlast on the final
     beat; the output frame is HIDDEN bf16 beats with tlast on the final beat,
@@ -164,8 +167,10 @@ characteristics:
     tb_attention_unit_inloop.py: real layer-10 hidden states and weights from a
     Granite 4.0-H-350M eager-attention forward pass (9-token prompt); DUT
     output vs the model's attention output: max abs 0.0, max rel 0.0,
-    0/6912 elements outside 1e-3/1e-3 (bit-exact). Run:
-    `.venv/bin/python run_test.py inloop` (~46 min, ~1.6M cycles/token).
+    0/6912 elements outside 1e-3/1e-3 (bit-exact). Re-run with
+    MATRIX_LANES = 4: same bit-exact result (max abs 0.0, 0/6912 outside),
+    ~12 min instead of ~46 min; measured ~0.4M cycles/token. Run:
+    `.venv/bin/python run_test.py inloop`.
   formal_verification: >
     formal/bmc.sby: BMC depth 220 (smtbmc boolector) on a HIDDEN=8/2/1/4/2
     instance with the FP datapaths abstracted (matrix_unit stub with the exact

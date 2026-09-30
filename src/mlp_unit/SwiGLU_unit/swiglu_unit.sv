@@ -62,7 +62,12 @@ module swiglu_unit #(
   output logic              busy
 );
 
-  localparam int  GU     = 2 * INTER;
+  localparam int  GU     = 2 * INTER;   // fused gate+up projection output
+
+  // Output-row parallelism of the gate+up and down projections (bit-exact;
+  // the AXI handshake hides the extra internal latency, see matrix_unit.sv).
+  localparam int MATRIX_LANES = 4;
+
   localparam logic [31:0] C_ONE = 32'h3F800000;
 
   // ------------------------------------------------------------ storage
@@ -76,7 +81,8 @@ module swiglu_unit #(
   logic        dn_s_tvalid, dn_s_tready, dn_s_tlast, dn_m_tvalid, dn_m_tlast;
   logic [15:0] dn_s_tdata,  dn_m_tdata;
 
-  matrix_unit #(.IN_FEATURES(HIDDEN), .OUT_FEATURES(GU)) u_gateup (
+  matrix_unit #(.IN_FEATURES(HIDDEN), .OUT_FEATURES(GU),
+                .LANES(MATRIX_LANES)) u_gateup (
     .clk(clk), .rst_n(rst_n), .load_en(load_en && !load_sel),
     .load_out_idx(load_out_idx), .load_in_idx(load_in_idx),
     .load_wdata(load_wdata), .load_is_bias(1'b0),
@@ -87,7 +93,8 @@ module swiglu_unit #(
     .busy(/*unused*/)
   );
 
-  matrix_unit #(.IN_FEATURES(INTER), .OUT_FEATURES(HIDDEN)) u_down (
+  matrix_unit #(.IN_FEATURES(INTER), .OUT_FEATURES(HIDDEN),
+                .LANES(MATRIX_LANES)) u_down (
     .clk(clk), .rst_n(rst_n), .load_en(load_en && load_sel),
     .load_out_idx(load_out_idx), .load_in_idx(load_in_idx),
     .load_wdata(load_wdata), .load_is_bias(1'b0),

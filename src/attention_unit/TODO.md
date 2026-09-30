@@ -51,3 +51,10 @@
 - Verified bit-exactly against the model because the model rounds the softmax
   probabilities to bf16; the ~1e-5 poly-exp error is far below the bf16
   rounding step and does not change the rounded probabilities.
+
+- MATRIX_LANES = 4 rollout (branch opt/lanes-rollout): the four Q/K/V/O
+  matrix_unit instances now compute four output rows per pass (bit-identical;
+  `.LANES(MATRIX_LANES)` with `localparam int MATRIX_LANES = 4`). Verified:
+  lint clean; unit test 64/64 PASS (max abs 0.0); in-loop layer-10 9-token run
+  0/6912 outside 1e-3/1e-3 (max abs 0.0) in ~12 min (was ~46 min), measured
+  ~0.4M cycles/token (was ~1.6M).
