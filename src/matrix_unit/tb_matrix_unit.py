@@ -102,6 +102,7 @@ async def test_matrix_unit(dut):
         stall_at = random.randrange(OUT)
         stall_len = random.randrange(1, 5)
         got = []
+        got_last = []
         stall_done = False
         ready = True
         while len(got) < OUT:
@@ -117,6 +118,7 @@ async def test_matrix_unit(dut):
             await Timer(1, unit="ns")
             if ready and int(dut.m_axis_tvalid.value) == 1:
                 got.append(int(dut.m_axis_tdata.value) & 0xFFFF)
+                got_last.append(int(dut.m_axis_tlast.value))
         await RisingEdge(dut.clk)
         await RisingEdge(dut.clk)
         dut.m_axis_tready.value = 0
@@ -135,6 +137,12 @@ async def test_matrix_unit(dut):
                     dut._log.warning(
                         f"Vector {v} out {o}: got 0x{got[o]:04x}, expected 0x{exp:04x}"
                     )
+            exp_last = 1 if o == OUT - 1 else 0
+            if got_last[o] != exp_last:
+                mismatches += 1
+                dut._log.error(
+                    f"Vector {v} out {o}: tlast={got_last[o]}, expected {exp_last}"
+                )
         total += OUT
 
         # wait for the unit to return to idle before the next vector

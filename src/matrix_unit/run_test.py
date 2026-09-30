@@ -38,8 +38,10 @@ INLOOP_CONFIGS = [
 ]
 
 UNIT_CONFIG = (32, 16, "tb_matrix_unit", "sim_build")
-LANES4_CONFIG = (32, 16, "tb_matrix_unit", "sim_build_l4", 4, "golden")
-TAIL_CONFIG = (32, 6, "tb_matrix_unit", "sim_build_tail", 4, "golden_tail")
+LANES4_CONFIG = dict(IN=32, OUT=16, test_module="tb_matrix_unit",
+                     build_subdir="sim_build_l4", lanes=4, golden="golden")
+TAIL_CONFIG = dict(IN=32, OUT=6, test_module="tb_matrix_unit",
+                   build_subdir="sim_build_tail", lanes=4, golden="golden_tail")
 
 
 def _sim_env() -> dict:
@@ -132,7 +134,8 @@ def run_config(IN: int, OUT: int, test_module: str, build_subdir: str,
                     for line in log.splitlines():
                         if ("Results" in line or "In-loop results" in line
                                 or "Bit-exact" in line or "Max abs" in line
-                                or "Max rel" in line or "passed" in line):
+                                or "Max rel" in line or "Busy cycles" in line
+                                or "passed" in line):
                             print("    " + line.strip(), flush=True)
                 if failed == 0:
                     return True
@@ -165,9 +168,9 @@ def main() -> int:
     if mode in ("lanes4", "tail", "lanes"):
         ok = True
         if mode in ("lanes4", "lanes"):
-            ok &= run_config(*LANES4_CONFIG, env=env, timeout=600)
+            ok &= run_config(**LANES4_CONFIG, env=env, timeout=600)
         if mode in ("tail", "lanes"):
-            ok &= run_config(*TAIL_CONFIG, env=env, timeout=600)
+            ok &= run_config(**TAIL_CONFIG, env=env, timeout=600)
         print(f"matrix unit {mode} PASSED" if ok else f"matrix unit {mode} FAILED",
               flush=True)
         return 0 if ok else 1

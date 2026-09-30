@@ -16,7 +16,8 @@
 
 module matrix_props #(
   parameter int IN_FEATURES  = 4,
-  parameter int OUT_FEATURES = 2
+  parameter int OUT_FEATURES = 2,
+  parameter int LANES        = 1
 ) (
   input logic                    clk,
   input logic                    rst_n,
@@ -37,7 +38,8 @@ module matrix_props #(
   logic        m_axis_tlast;
   logic        busy;
 
-  matrix_unit #(.IN_FEATURES(IN_FEATURES), .OUT_FEATURES(OUT_FEATURES)) u_dut (
+  matrix_unit #(.IN_FEATURES(IN_FEATURES), .OUT_FEATURES(OUT_FEATURES),
+                .LANES(LANES)) u_dut (
     .clk           (clk),
     .rst_n         (rst_n),
     .load_en       (load_en),

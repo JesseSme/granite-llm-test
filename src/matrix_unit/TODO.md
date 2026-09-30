@@ -78,4 +78,20 @@ skipping the 0+p0 seed (differs for -0).
       bit-exact; in-loop q_proj 6144/6144 and k_proj 2048/2048 bit-exact
       (max abs 0.0); formal/bmc.sby depth 40 PASS. Busy-cycle count for the
       32x16 unit test (8 vectors): 4627 cycles (576/vector compute + stalls).
-- [ ] P1 LANES parallel output lanes
+- [x] P1 LANES parallel output lanes (default 1, bit-exact) — LANES complete
+      fp32 MAC datapaths (own MUL/ADD fp_unit + accumulator) on different output
+      rows, packed weight words (one read serves all lanes), per-row bias, and
+      an out_buf STORE stage (data stable under backpressure). Rows keep the
+      sequential fp32 add order of LANES=1 by construction; blocks stream lanes
+      0..LANES-1 in row order and the final block masks OUT_FEATURES % LANES.
+      Evidence: lint clean (default, LANES=4, tail, odd LANES); forced-rebuild
+      unit tests: 32x16 LANES=1 128/128, 32x16 LANES=4 128/128, 32x6 LANES=4
+      (tail) 48/48, all bit-exact with tlast checked; in-loop q_proj 6144/6144
+      and k_proj 2048/2048 bit-exact (max abs 0.0); formal/bmc.sby and
+      formal/bmc_lanes.sby (LANES=4, OUT=2<LANES) depth 40 PASS.
+      Busy cycles (8 vectors, 32x16): LANES=1 4755, LANES=4 1299 (~3.7x);
+      tail 32x6 LANES=4 643. Cycle model: per LANES-block
+      IN+4+LANES cycles (MAC_FILL + IN MAC + ADD_LAST + BIAS + STORE + LANES
+      output beats), i.e. IN+5 per row at LANES=1.
+- [ ] P2 pipelined fp_add (P stages) + P accumulator contexts per lane
+- [ ] P4 balanced leading-one detectors in fp_add/fp_mul (fp library)

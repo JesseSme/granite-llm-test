@@ -38,6 +38,15 @@ description: >
   differences can remain because ATen's blocked GEMM accumulation order is not
   replicated.
 
+  Parameter LANES (default 1): each lane owns a complete binary32 MAC datapath
+  (its own fp_unit MUL, fp_unit ADD and accumulator) and computes a different
+  output row. The lanes are independent rows and never exchange data, so every
+  row keeps the exact sequential fp32 accumulation order and the result is
+  bit-identical to LANES=1. Weight rows are packed LANES per memory word so one
+  read serves all lanes; rows are emitted in row order and the final block is
+  masked when OUT_FEATURES % LANES != 0. LANES=1 reproduces the original
+  behavior/configs.
+
 interface:
   description: >
     Weight/bias load port (one element per cycle) plus AXI-Stream input/output
@@ -114,17 +123,20 @@ max_clock_speed: 200 MHz (estimated; binary32 fp_unit MUL/ADD path with the
 
 characteristics:
   latency: >
-    Per output row: OUT_FEATURES x (IN_FEATURES + 4) cycles plus input beats and
-    handshake stalls (MAC_FILL operand load, IN_FEATURES MAC cycles, final
-    product add, bias add, output). For 768->768: ~593k cycles per vector.
-  throughput: 1 multiply-accumulate per cycle (accumulator held in the fp32 adder's
-    output register; no stalls between MACs)
+    Per LANES-block of LANES output rows: IN_FEATURES + 4 + LANES busy cycles
+    (MAC_FILL operand load, IN_FEATURES MAC cycles, final product add, bias add,
+    one STORE cycle latching the biased sums, then LANES output beats) plus
+    handshake stalls; at LANES=1 that is IN_FEATURES + 5 per row. For 768->768
+    at LANES=4: ~4x fewer cycles per vector (~148k vs ~593k at LANES=1).
+  throughput: LANES multiply-accumulates per cycle (one per lane; each accumulator
+    held in its lane's fp32 adder output register, no stalls between MACs)
   resource_usage: >
-    Parameterized (OUT_FEATURES x IN_FEATURES) x 16-bit weight RAM,
-    OUT_FEATURES x 16-bit bias RAM, IN_FEATURES x 16-bit input buffer,
-    2 binary32 fp_unit instances (MUL + ADD) and one fp32_to_bf16_round unit,
-    plus registered multiplier operands (mul_a_q/mul_b_q) between the weight
-    memory and the multiplier.
+    Parameterized (W_WORDS x IN_FEATURES) x (LANES x 16)-bit weight RAM,
+    N_ROWS x 16-bit bias RAM (rows padded to a LANES multiple),
+    IN_FEATURES x 16-bit input buffer, LANES x (one binary32 fp_unit MUL + one
+    binary32 fp_unit ADD + one fp32_to_bf16_round unit), plus a registered x
+    operand (mul_a_q) shared by the lanes and LANES registered weight operands
+    (mul_b_q[l]) between the weight memory and the multipliers.
   notes: >
     AXI-Stream contract: the input vector is IN_FEATURES beats with tlast on the
     final beat (the counter bound also ends streams that omit tlast); the output
@@ -133,12 +145,17 @@ characteristics:
     The multiplier operands are registered: MAC_FILL loads element 0 and each
     MAC cycle prefetches element i+1, so the MUL output during MAC(i) is still
     the product of element i-1 and the sequential accumulation order is
-    unchanged. The output data is combinational from the fp32 accumulator
-    through the rounding stage, with registered tvalid.
+    unchanged. The biased sums are latched into out_buf for the output beats
+    (registered tvalid, data stable under backpressure). The final LANES-block
+    masks to OUT_FEATURES % LANES valid rows.
   unit_verification: >
-    tb_matrix_unit.py: 32x16 synthetic configuration, 8 vectors, random input
-    bubbles and randomized output stalls — 128/128 outputs bit-exact vs the
-    sequential-fp32 golden sample.
+    tb_matrix_unit.py, 8 vectors, random input bubbles, randomized output stalls
+    and tlast checked on every beat, vs the sequential-fp32 golden sample:
+    - IN=32 OUT=16 LANES=1: 128/128 bit-exact (4755 busy cycles, 8 vectors;
+      rebuild-verified)
+    - IN=32 OUT=16 LANES=4: 128/128 bit-exact (1299 busy cycles; ~3.7x fewer)
+    - IN=32 OUT=6 LANES=4 (masked tail): 48/48 bit-exact (643 busy cycles)
+    Run: `.venv/bin/python run_test.py`, `... run_test.py lanes4`, `... tail`.
   in_loop_verification: >
     tb_matrix_unit_inloop.py: real Granite Linear layers. q_proj (768x768) of
     layer 10: 6144/6144 outputs bit-exact (100%, max abs error 0.0); k_proj
@@ -149,6 +166,8 @@ characteristics:
     stubs) proves: s_axis_tready == !busy, output valid only while busy, tlast
     only on the final output beat, busy rises only after an accepted input beat,
     and exactly OUT_FEATURES output beats per input vector. Run: sby -f bmc.sby.
+    formal/bmc_lanes.sby re-runs the same properties with LANES=4 and
+    OUT_FEATURES=2 < LANES (masked-tail corner); depth 40 PASS.
 
 optimization:
   branch: opt/matrix-unit
@@ -162,5 +181,7 @@ optimization:
     plus P interleaved accumulator contexts; P4 balanced leading-one detectors.
   out_of_scope: any reassociation, fp_fma fusion, wide exact accumulator, or
     removing the 0+p0 seed (all change results).
-  status: P3 (registered multiplier operands) implemented and verified;
-    P1 (LANES parallel output lanes) next.
+  status: P3 (registered multiplier operands) and P1 (LANES parallel output
+    lanes, default 1, verified at LANES=1/4 and with a masked tail) implemented
+    and verified; next P2 (pipelined fp_add + interleaved accumulator contexts)
+    and P4 (balanced leading-one detectors in the fp library).
