@@ -1,8 +1,8 @@
-# BMC of matrix_unit AXI-Stream/FSM invariants (fp_units abstracted).
-# Run: sby -f bmc.sby
+# BMC of matrix_unit AXI-Stream/FSM invariants with LANES=4 (masked tail),
+# fp_units abstracted. Run: sby -f bmc_lanes.sby
 
 [tasks]
-bmc
+bmc_lanes
 
 [options]
 mode bmc
@@ -19,6 +19,7 @@ read_verilog -sv fp_add_pipe2_stub.sv
 read_verilog -sv fp32_to_bf16_round.sv
 read_verilog -sv matrix_unit.sv
 read_verilog -formal -sv matrix_props.sv
+chparam -set LANES 4 matrix_props
 prep -top matrix_props
 
 [files]

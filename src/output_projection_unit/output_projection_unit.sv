@@ -93,19 +93,22 @@ module output_projection_unit #(
   /* verilator lint_off UNUSEDSIGNAL */
   logic [1:0]        div_cmp;
   logic [4:0]        div_flags;
+  logic              unused_out_valid_div;
   /* verilator lint_on UNUSEDSIGNAL */
 
   fp_unit #(.W_EXP(8), .W_MANT(W_MANT32)) u_div (
-    .clk  (clk),
-    .rst_n(rst_n),
-    .mode (fp_pkg::OP_DIV),
-    .rm   (fp_pkg::RM_RNE),
-    .a    (div_a),
-    .b    (C_LOGITS_SCALING),
-    .c    (W_FP32'(0)),
-    .y    (div_y),
-    .cmp  (div_cmp),
-    .flags(div_flags)
+    .clk      (clk),
+    .rst_n    (rst_n),
+    .in_valid (1'b1),
+    .mode     (fp_pkg::OP_DIV),
+    .rm       (fp_pkg::RM_RNE),
+    .a        (div_a),
+    .b        (C_LOGITS_SCALING),
+    .c        (W_FP32'(0)),
+    .y        (div_y),
+    .cmp      (div_cmp),
+    .flags    (div_flags),
+    .out_valid(unused_out_valid_div)
   );
 
   fp32_to_bf16_round u_round (.x(div_y), .y(div_bf));
