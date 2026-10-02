@@ -120,13 +120,14 @@ characteristics:
     768x1536 + conv 1792x4 + 1792 + 1536 + 3x48 weights), ~25 ms at 150 MHz.
     Per token: in_proj (768 feed + 3376/4 x 780 MAC with MATRIX_LANES = 4) +
     conv (1792 x 17) + two accurate SiLU passes (1792 + 1536 elements x ~30) +
-    SSM frame (1840 feed + 1536 x ~771 recurrence) + gated norm (~1536 x 12) +
-    out_proj (1536 feed + 768/4 x 1548 MAC) -> measured ~2.3M cycles per token
-    in-loop (~15.4 ms at 150 MHz; was ~5.1M at LANES=1). The conv history
-    (3 previous B_C vectors) and the SSM state persist across tokens.
-  throughput: one token per ~2.3M cycles; the SSM recurrence (~1.2M) now
-    dominates, followed by the in_proj (~0.66M) and out_proj (~0.30M)
-    projections.
+    SSM frame (1840 feed + per-head prep/w loop + 48 x 8 x (132 + 4) pipelined
+    lane cycles = ~70k total) + gated norm (~1536 x 12) + out_proj (1536 feed +
+    768/4 x 1548 MAC) -> measured ~1.17M cycles per token in-loop (~7.8 ms at
+    150 MHz; was ~2.3M after the matrix rollout, ~5.1M originally). The conv
+    history (3 previous B_C vectors) and the SSM state persist across tokens.
+  throughput: one token per ~1.17M cycles; the in_proj (~0.66M) now dominates,
+    followed by the out_proj (~0.30M), the SSM recurrence (~0.07M with
+    LANES=4, was ~1.2M) and the conv/silu/norm phases.
   resource_usage: >
     Sub-unit memories: in_proj weights 3376x768x16-bit (4.15 MB), out_proj
     768x1536x16-bit (1.89 MB), conv weights 1792x4 + bias, SSM state
@@ -134,8 +135,8 @@ characteristics:
     proj 3376x16, conv raw/out 1792x16 each, ssm 1536x32, gate-SiLU 1536x32,
     norm weight 1536x16, and 4 binary32 fp_unit instances (MUL/ADD/SQRT/DIV)
     plus 2 bf16 rounders on top of the instantiated matrix_unit (x2, with
-    MATRIX_LANES = 4 -> 8 pipelined MAC datapaths), conv1d_unit, ssm_unit and
-    silu_seq sub-units.
+    MATRIX_LANES = 4 -> 8 pipelined MAC datapaths), conv1d_unit, ssm_unit
+    (LANES=4 -> 20 pipelined MAC units) and silu_seq sub-units.
   notes: >
     AXI-Stream contract: HIDDEN bf16 beats per frame in and out, tlast on the
     final beat, output held under backpressure. One frame is one sequence
@@ -173,7 +174,12 @@ characteristics:
     RMS(x*silu(gate)) << sqrt(eps) and the norm is eps-dominated.
     Re-run with MATRIX_LANES = 4 (branch opt/lanes-rollout): identical
     max abs/rel and 0/3840 outside 2e-2, ~66 min (measured ~2.3M cycles/token,
-    was ~5.1M). Run: `.venv/bin/python run_test.py inloop`.
+    was ~5.1M). Re-run again with the pipelined SSM lanes (branch opt/ssm-unit,
+    LANES=4): again identical figures (max abs 3.906e-03, max rel 7.692e-03,
+    0/3840 outside 2e-2, non-finite 0) at ~1.17M cycles/token (~7.8 ms at
+    150 MHz); the in-loop wall time is dominated by the 3.78M-cycle weight
+    load and grows slightly because the lane datapath increases the per-cycle
+    simulation cost. Run: `.venv/bin/python run_test.py inloop`.
   formal_verification: >
     formal/bmc.sby: BMC depth 260 (smtbmc boolector) on a HIDDEN=8/INTER=4/
     HEADS=2/HEAD_DIM=2/D_STATE=2 instance with every datapath abstracted by a

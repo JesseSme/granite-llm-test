@@ -1,4 +1,4 @@
-# status: verified: unit + in-loop (max abs 4.5e-8); formal depth 140 PASS
+# status: verified: unit + lane-equivalence + in-loop (max abs 4.47e-8, ~70k cycles/token at LANES=4); formal depth 140 PASS
 #Description
 
 llm_guidance: 
@@ -41,6 +41,17 @@ description: >
   poly after x/32 range scaling + 5 squarings; softplus = max(z,0) +
   2*atanh series), each ~1e-5 relative error.
   Reference: LLM_LAYER_DESCRIPTION.md §2b Step 5.
+
+  Parallelism (parameter LANES, default 4): the per-(head, dim) outputs are
+  independent, so LANES consecutive dims of one head are computed in parallel
+  by LANES pipelined MAC datapaths. Each lane keeps the exact per-element
+  dataflow of the original single-lane design (h = dA*h + w*x, then
+  acc += h*C in ascending s, same operand order), so every y element is
+  bit-identical to LANES=1; LANES only changes when operations are issued. A
+  lane's five FP operations (3 MUL + 2 ADD) overlap across elements, issuing
+  one state element per cycle, and the lanes share the per-head dA/w/C buffers.
+  Lanes with d >= HEAD_DIM in the final block of a head are masked: they do
+  not write state and do not contribute output beats.
 
 interface:
   - name: clk
@@ -110,29 +121,33 @@ interface:
       Unit is clearing state or processing/streaming a token (input beats not
       accepted)
 
-max_clock_speed: 150 MHz (estimated; binary32 fp_unit MUL/ADD critical path as
-  in matrix_unit/residual_adder_unit plus the 196k-word state read/write
-  addressing, which a real implementation maps to SRAM; no STA cell library
-  available)
+max_clock_speed: 150 MHz (estimated; the critical path is still the binary32
+  fp_unit MUL/ADD datapath as in matrix_unit/residual_adder_unit (2-cycle
+  pipelined units could break it further) plus the per-lane state read/write
+  addressing, which a real implementation maps to a multi-ported SRAM; no STA
+  cell library available)
 
 characteristics:
   latency: >
     After reset: a sequential state clear of NUM_HEADS*HEAD_DIM*D_STATE cycles
     (196,608 at 48/32/128, ~1.3 ms at 150 MHz). Per token: input frame beats
-    (1840) + per-head preparation (~90 cycles x 48) + D_STATE-cycle
-    w = dtp*B loop (256) + the (head, dim) update/output loops
-    (48 x 32 x (3 + 6 x 128) = ~1.18M cycles) -> ~1.19M cycles per token
-    (~7.9 ms at 150 MHz); the state is carried to the next token.
+    (1840) + per-head preparation (~90 cycles x 48) + the D_STATE-cycle
+    w = dtp*B loop (2 x 128 x 48) + the pipelined update/output blocks:
+    ceil(HEAD_DIM/LANES) blocks per head, D_STATE + 4 MAC cycles each plus the
+    LANES output beats -> 48 x 8 x (132 + 4) = ~52k cycles at 48/32/128
+    LANES=4. Measured in-loop: ~70.4k cycles per token (~0.47 ms at 150 MHz;
+    was ~1.19M / ~7.9 ms at LANES=1); the state is carried to the next token.
   throughput: >
-    One state element update per 6 cycles (dA*h, w*x, add, newh*C, accumulate,
-    loop); one 32-bit output beat per 771 cycles at D_STATE=128. Sequential
-    over the sequence dimension by construction (recurrence).
+    LANES state elements per cycle (one per pipelined lane); a block of LANES
+    32-bit output beats per (D_STATE + 4 + LANES) cycles at D_STATE=128.
+    Sequential over the sequence dimension by construction (recurrence).
   resource_usage: >
-    State RAM: 196,608 x 32-bit (NUM_HEADS x HEAD_DIM x D_STATE). Buffers:
-    x 1536 x 16, B/C 128 x 16 each, dt 48 x 16, weights 3 x 48 x 16, w 128 x 32,
-    dA 48 x 32. Nine binary32 fp_unit instances (top MUL + ADD; softplus MUL +
-    ADD + DIV and its exp MUL + ADD; top-level exp MUL + ADD), plus two
-    fp32_to_bf16_round stages.
+    State RAM: 196,608 x 32-bit (NUM_HEADS x HEAD_DIM x D_STATE), read and
+    written by LANES lanes per cycle. Buffers: x 1536 x 16, B/C 128 x 16 each,
+    dt 48 x 16, weights 3 x 48 x 16, w 128 x 32, dA 48 x 32. Per lane: three
+    fp32 fp_unit MULs and two fp32 fp_unit ADDs (20 units at LANES=4); plus
+    the per-head MUL/ADD and the softplus/exp helper units, and two
+    fp32_to_bf16_round stages. Output out_buf: LANES x 32-bit.
   notes: >
     AXI-Stream contract: the input frame is x|B|C|dt with tlast on the final
     beat (the counter bound also ends frames that omit tlast); the output
@@ -146,23 +161,31 @@ characteristics:
     tb_ssm_unit.py: 2 heads / 2 head_dim / 4 d_state synthetic instance, 4
     tokens with state carried between frames, golden from gen_golden.py (fp32
     recurrence with torch exp/softplus): 16/16 outputs within 5% / 0.05 abs,
-    max abs error 1e-6, max rel error 1e-6. tb_controlled.py: directed
-    A_log=0 (A=-1), D=1, dt_bias=0, dt=0.5, x=B=C=1 case, 3 tokens, checked
-    against torch to 1e-3. Run: `.venv/bin/python run_test.py` (and
-    `run_test.py controlled`).
+    max abs error 1e-6, max rel error 1e-6; re-run at LANES=1/2/4/8, all
+    16/16 max abs 1e-6. tb_controlled.py: directed A_log=0 (A=-1), D=1,
+    dt_bias=0, dt=0.5, x=B=C=1 case, 3 tokens, checked against torch to 1e-3.
+    tb_ssm_lanes.py (new): one LANES=1 and one LANES=4 instance in the same
+    harness, shared weights/frames, 3/5/6 geometry (full + masked lane
+    blocks), 6 frames: 90/90 output beats bit-identical including tlast.
+    Run: `.venv/bin/python run_test.py` (`controlled`, `lanes`).
   in_loop_verification: >
     tb_ssm_unit_inloop.py: real layer-0 (48/32/128) x/B/C/dt from a Granite
     4.0-H-350M forward pass (9-token prompt), captured by patching
     mamba2_chunk_scan. DUT y vs the model's chunk_scan output: 0/13824
     elements outside 1e-3/1e-3 (max abs 4.47e-8, max rel 5.14e-6); vs the fp32
     recurrence from the same inputs: max abs 2.79e-8, max rel 5.51e-6.
-    Run: `.venv/bin/python run_test.py inloop` (~18 min, 1.2M cycles/token).
+    Re-run with the pipelined lanes (LANES=4): identical figures (max abs
+    4.470e-08 / 2.794e-08, 0/13824 outside), ~70.4k cycles/token (was ~1.19M);
+    in-loop wall time drops from ~18 min to ~4 min.
+    Run: `.venv/bin/python run_test.py inloop`.
   formal_verification: >
-    formal/bmc.sby: BMC depth 140 on a 2/1/1 instance with the FP datapaths
-    abstracted by anyseq stubs (fp_unit, fp_exp_seq, fp_softplus_seq; done
-    response bounded to <= 4 cycles). Properties: tready == !busy; tvalid only
-    while busy; tlast exactly on the NUM_HEADS*HEAD_DIM-th output beat; at most
-    XN output beats per activation; a busy period ends only by accepting a
-    tlast output beat; offered beats stay valid/stable under backpressure; no
-    output beats before the first complete input frame. PASSES.
+    formal/bmc.sby: BMC depth 140 (smtbmc boolector) on a 2/1/1 instance with
+    the FP datapaths abstracted by anyseq stubs (fp_unit, fp_exp_seq,
+    fp_softplus_seq; done response bounded to <= 4 cycles; the lane datapath
+    arithmetic is abstracted, its bit-exactness is covered by tb_ssm_lanes).
+    Properties: tready == !busy; tvalid only while busy; tlast exactly on the
+    NUM_HEADS*HEAD_DIM-th output beat; at most XN output beats per activation;
+    a busy period ends only by accepting a tlast output beat; offered beats
+    stay valid/stable under backpressure; no output beats before the first
+    complete input frame. PASSES (66 s).
     Run: `sby -f bmc.sby` (cap memory with `ulimit -v` if needed).
