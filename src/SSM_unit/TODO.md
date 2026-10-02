@@ -48,3 +48,30 @@
   `initial assume(!rst_n)` for a defined start state, and the framing
   assumptions must force `tlast` exactly on the final frame beat (otherwise
   the RTL's accept-without-tlast path breaks the input counter model).
+
+## Optimization: pipelined output lanes (branch opt/ssm-unit)
+
+- The per-(head, dim) outputs are independent, so LANES consecutive dims of one
+  head are computed in parallel (parameter `LANES`, default 4). Each lane has
+  its own 3 MUL + 2 ADD fp_unit pipeline that overlaps all five FP operations
+  of element s across elements and issues one element per cycle:
+    t: m1 = dA*h[s], m2 = w[s]*x, m3 = D*x (t=0)
+    t+1: a1 = m1 + m2 (new h)
+    t+2: h[s] <= a1, m3 = a1*C[s]
+    t+3: a2 = acc + m3 (output accumulator)
+  so a block of LANES outputs is ready after D_STATE + 4 cycles, then streamed
+  in dim order from out_buf (stable under backpressure). The per-element
+  operations and operand order are unchanged, so every y is bit-identical to
+  the original single-lane design; masked lanes (HEAD_DIM % LANES != 0) do not
+  write state and do not contribute beats.
+- Evidence: lint clean at 2/2/4, 2/1/1, 2/1/2, 48/32/128, 3/5/6, LANES=1
+  (2/3/5) and LANES=8 (2/64/128); unit test 16/16 (max abs 1e-6) at
+  LANES=1/2/4/8; controlled directed test PASS; new tb_ssm_lanes (LANES=1 vs
+  LANES=4 in one harness, 3/5/6 masked geometry) 90/90 output beats
+  bit-identical over 6 frames; in-loop full config (48/32/128) 0/13824 outside
+  1e-3 with max abs 4.470e-08 vs the model and 2.794e-08 vs the fp32
+  recurrence - identical figures to the pre-optimization run; measured
+  ~70.4k cycles/token (was ~1.19M, ~17x); formal bmc.sby PASS in 66 s
+  (switched to `smtbmc boolector`, depth 140).
+- Note: the reset state clear is still ~196k cycles (one word/cycle); it now
+  dominates a short run (9-token in-loop: 196k clear + 9 x 70.4k).

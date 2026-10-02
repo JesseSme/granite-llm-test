@@ -22,6 +22,30 @@
 //
 // Weight load: A_log, D, dt_bias (bf16 values, one per head).
 //
+// Parallelism (LANES, default 4): the (head, dim) outputs are independent, so
+// LANES consecutive dims of the same head are computed in parallel by LANES
+// pipelined MAC datapaths. Each lane keeps the exact per-element dataflow of
+// the original single-lane design
+//   h[s] = dA*h[s] + (w[s]*x);  acc = acc + h[s]*C[s]   (s ascending)
+// with the same operand order, so every y element is bit-identical to LANES=1
+// (the lane only changes when an operation is issued, not the operations
+// themselves). The lanes cover dims d_base..d_base+LANES-1 of one head; the
+// last block of a head masks lanes with d >= HEAD_DIM (they do not write state
+// and do not produce output beats).
+//
+// Per-lane element pipeline (3 MUL + 2 ADD fp_units per lane): the five FP
+// operations of element s overlap across elements, issuing one element per
+// cycle. With t counted from 0 for the first element of an output:
+//   t   : m1 = dA*h[t]      m2 = w[t]*x      m3 = D*x (t = 0 only)
+//   t+1 : a1 = m1 + m2
+//   t+2 : h[t] <= a1        m3 = a1 * C[t]
+//   t+3 : a2 = acc + m3     (acc = a2 of the previous element)
+// so one output is ready after D_STATE + 4 cycles; the units' own output
+// registers are the pipeline registers (no additional staging), the first a2
+// operand is the registered D*x, and the a2 chain is the output accumulator.
+// The last pipeline stage drains into out_buf (registers, stable under
+// backpressure) and the block's valid beats are streamed in dim order.
+//
 // The recurrent state (NUM_HEADS*HEAD_DIM*D_STATE fp32 words) is cleared
 // sequentially after reset (one word per cycle, ~196k cycles at full size):
 // a single-cycle clear of a state this large is not implementable, and a
@@ -37,9 +61,12 @@ module ssm_unit #(
   parameter int HEAD_DIM  = 32,
   parameter int D_STATE   = 128,
   parameter int W_DATA    = 16,
+  parameter int LANES     = 4,   // parallel output lanes (dims of one head)
   parameter int H_W       = $clog2(NUM_HEADS),
   parameter int D_W       = $clog2(HEAD_DIM),
-  parameter int S_W       = $clog2(D_STATE)
+  parameter int S_W       = (D_STATE < 2) ? 1 : $clog2(D_STATE),
+  parameter int L_W       = (LANES < 2) ? 1 : $clog2(LANES),
+  parameter int T_W       = $clog2(D_STATE + 4)   // pipeline time counter
 ) (
   input  logic              clk,
   input  logic              rst_n,
@@ -70,6 +97,11 @@ module ssm_unit #(
   localparam int CNT_W = $clog2(TOTAL_BEATS);
   localparam int HSTATE_N = NUM_HEADS * HEAD_DIM * D_STATE;
   localparam int CLR_W = $clog2(HSTATE_N);
+  // d_base holds HEAD_DIM, and d_lane = d_base + LANES - 1 must not wrap even
+  // when LANES exceeds HEAD_DIM (D_W + 1 keeps the historical width as the
+  // floor for parameter compatibility).
+  localparam int D_BW = ((D_W + 1) > $clog2(HEAD_DIM + LANES))
+                      ? (D_W + 1) : $clog2(HEAD_DIM + LANES);
 
   // ------------------------------------------------------------ storage
   logic [W_DATA-1:0] a_log_q [0:NUM_HEADS-1];
@@ -107,7 +139,7 @@ module ssm_unit #(
     .start(sp_start), .z(sp_z), .y(sp_y), .done(sp_done)
   );
 
-  // exp (for A_h and dA_h") — accurate sequential exp (the shared LUT
+  // exp (for A_h and dA_h) — accurate sequential exp (the shared LUT
   // fp_exp is only ~8-bit accurate, insufficient for the recurrence)
   logic [31:0] exp_x, exp_y;
   logic        exp_start, exp_done;
@@ -119,7 +151,8 @@ module ssm_unit #(
 
   assign exp_start = (state == H_AEXP) || (state == H_DEXP);
 
-  // MUL
+  // Prep MUL / ADD (per-head preparation and the w = dtp * B loop; the MAC
+  // lanes below have their own units).
   fp_pkg::op_t       mul_mode;
   fp_pkg::rounding_t mul_rm;
   logic [31:0]       mul_a, mul_b, mul_y;
@@ -137,7 +170,6 @@ module ssm_unit #(
     .in_valid(1'b1), .out_valid(unused_out_valid_mul)
   );
 
-  // ADD
   fp_pkg::op_t       add_mode;
   fp_pkg::rounding_t add_rm;
   logic [31:0]       add_a, add_b, add_y;
@@ -160,6 +192,60 @@ module ssm_unit #(
   assign add_mode = fp_pkg::OP_ADD;
   assign add_rm   = fp_pkg::RM_RNE;
 
+  // ------------------------------------------------------------ MAC lanes
+  // Per-lane element pipeline: m1 = dA*h, m2 = w*x, a1 = m1+m2 (new h),
+  // m3 = a1*C, a2 = acc+m3 (output accumulator). See the header comment.
+  logic [31:0] m1_a [0:LANES-1], m1_b [0:LANES-1], m1_y [0:LANES-1];
+  logic [31:0] m2_a [0:LANES-1], m2_b [0:LANES-1], m2_y [0:LANES-1];
+  logic [31:0] m3_a [0:LANES-1], m3_b [0:LANES-1], m3_y [0:LANES-1];
+  logic [31:0] a1_a [0:LANES-1], a1_b [0:LANES-1], a1_y [0:LANES-1];
+  logic [31:0] a2_a [0:LANES-1], a2_b [0:LANES-1], a2_y [0:LANES-1];
+  logic [31:0] acc_q   [0:LANES-1];   // first a2 operand: D*x
+  logic [31:0] out_buf [0:LANES-1];   // drained y, stable under backpressure
+
+  /* verilator lint_off PINCONNECTEMPTY */
+  genvar gl;
+  generate
+    for (gl = 0; gl < LANES; gl++) begin : g_lane
+      fp_unit #(.W_EXP(8), .W_MANT(23)) u_m1 (
+        .clk(clk), .rst_n(rst_n),
+        .mode(fp_pkg::OP_MUL), .rm(fp_pkg::RM_RNE),
+        .a(m1_a[gl]), .b(m1_b[gl]), .c('0),
+        .y(m1_y[gl]), .cmp(/*unused*/), .flags(/*unused*/),
+        .in_valid(1'b1), .out_valid(/*unused*/)
+      );
+      fp_unit #(.W_EXP(8), .W_MANT(23)) u_m2 (
+        .clk(clk), .rst_n(rst_n),
+        .mode(fp_pkg::OP_MUL), .rm(fp_pkg::RM_RNE),
+        .a(m2_a[gl]), .b(m2_b[gl]), .c('0),
+        .y(m2_y[gl]), .cmp(/*unused*/), .flags(/*unused*/),
+        .in_valid(1'b1), .out_valid(/*unused*/)
+      );
+      fp_unit #(.W_EXP(8), .W_MANT(23)) u_m3 (
+        .clk(clk), .rst_n(rst_n),
+        .mode(fp_pkg::OP_MUL), .rm(fp_pkg::RM_RNE),
+        .a(m3_a[gl]), .b(m3_b[gl]), .c('0),
+        .y(m3_y[gl]), .cmp(/*unused*/), .flags(/*unused*/),
+        .in_valid(1'b1), .out_valid(/*unused*/)
+      );
+      fp_unit #(.W_EXP(8), .W_MANT(23)) u_a1 (
+        .clk(clk), .rst_n(rst_n),
+        .mode(fp_pkg::OP_ADD), .rm(fp_pkg::RM_RNE),
+        .a(a1_a[gl]), .b(a1_b[gl]), .c('0),
+        .y(a1_y[gl]), .cmp(/*unused*/), .flags(/*unused*/),
+        .in_valid(1'b1), .out_valid(/*unused*/)
+      );
+      fp_unit #(.W_EXP(8), .W_MANT(23)) u_a2 (
+        .clk(clk), .rst_n(rst_n),
+        .mode(fp_pkg::OP_ADD), .rm(fp_pkg::RM_RNE),
+        .a(a2_a[gl]), .b(a2_b[gl]), .c('0),
+        .y(a2_y[gl]), .cmp(/*unused*/), .flags(/*unused*/),
+        .in_valid(1'b1), .out_valid(/*unused*/)
+      );
+    end
+  endgenerate
+  /* verilator lint_on PINCONNECTEMPTY */
+
   // bf16 rounding
   logic [15:0] z_bf16;
   logic [15:0] sp_bf16;
@@ -180,39 +266,51 @@ module ssm_unit #(
     H_DWAIT,   // wait, store dA
     W_ISSUE,   // issue w_s = dtp * B_s
     W_STORE,   // store w_s, advance s
-    D_INIT,    // issue acc = D_h * x_hd
-    D_ACC,     // latch acc
-    U0, U1, U2, U3, U4, U5,   // per-element update + y accumulation
-    OUT        // stream y beat (handshake)
+    MAC,       // pipelined element issue for one LANES-wide output block
+    OUT        // stream the block's y beats (handshake)
   } state_t;
 
   state_t state;
   logic [CNT_W-1:0] in_cnt;
   logic [H_W-1:0]   h_cnt;
-  logic [D_W-1:0]   d_cnt;
   logic [S_W-1:0]   s_cnt;
+  logic [D_BW-1:0]  d_base;    // first dim of the current LANES block
+  logic [L_W-1:0]   out_cnt;   // output beat counter within the block
+  logic [T_W-1:0]   t_cnt;     // MAC pipeline time counter
 
-  logic [31:0] dtp_reg, a_reg, xd_reg;
-  logic [31:0] acc_reg, p1_reg;
+  logic [31:0] dtp_reg, a_reg;
+
+  // LANES block geometry. int arithmetic: LANES can exceed the D_BW range.
+  logic [L_W:0] lanes_this;
+  always_comb begin
+    if ((HEAD_DIM - int'(d_base)) >= LANES)
+      lanes_this = (L_W + 1)'(LANES);
+    else
+      lanes_this = (L_W + 1)'(HEAD_DIM - int'(d_base));
+  end
 
   assign s_axis_tready = (state == IDLE);
   assign busy          = (state != IDLE);
-
-  // Flat index into the recurrent state.
-  wire [CLR_W-1:0] hidx =
-      CLR_W'(h_cnt) * (HEAD_DIM * D_STATE) + CLR_W'(d_cnt) * D_STATE + CLR_W'(s_cnt);
 
   // Start softplus in the same cycle the z add result is on the adder output,
   // so its step-0 edge samples the correct z.
   assign sp_start = (state == H_ZDEC);
 
   assign m_axis_tvalid = (state == OUT);
-  assign m_axis_tdata  = acc_reg;
+  assign m_axis_tdata  = out_buf[out_cnt];
   assign m_axis_tlast  = (state == OUT) &&
                          (h_cnt == H_W'(NUM_HEADS - 1)) &&
-                         (d_cnt == D_W'(HEAD_DIM - 1));
+                         ((d_base + D_BW'(out_cnt)) == D_BW'(HEAD_DIM - 1));
 
   // ------------------------------------------------------------ op inputs
+  // Per-lane combinational helpers (indices/validity for the current block).
+  logic [D_BW-1:0]  d_lane  [0:LANES-1];
+  logic [D_BW-1:0]  d_rd    [0:LANES-1];
+  logic             lane_ok [0:LANES-1];
+  logic [CLR_W-1:0] hidx_r  [0:LANES-1];
+  logic [CLR_W-1:0] hidx_w  [0:LANES-1];
+  logic [31:0]      x_lane  [0:LANES-1];
+
   always_comb begin
     sp_z  = {z_bf16, {(32 - W_DATA) {1'b0}}};
     exp_x = '0;
@@ -220,6 +318,30 @@ module ssm_unit #(
     mul_b = '0;
     add_a = '0;
     add_b = '0;
+
+    for (int l = 0; l < LANES; l++) begin
+      m1_a[l] = '0; m1_b[l] = '0;
+      m2_a[l] = '0; m2_b[l] = '0;
+      m3_a[l] = '0; m3_b[l] = '0;
+      a1_a[l] = '0; a1_b[l] = '0;
+      a2_a[l] = '0; a2_b[l] = '0;
+    end
+
+    // Block geometry and per-lane state/input indices (invalid lanes clamp to
+    // dim 0; their state writes and output beats are masked).
+    for (int l = 0; l < LANES; l++) begin
+      d_lane[l]  = d_base + D_BW'(l);
+      lane_ok[l] = (d_lane[l] < D_BW'(HEAD_DIM));
+      d_rd[l]    = lane_ok[l] ? d_lane[l] : D_BW'(0);
+      hidx_r[l]  = CLR_W'(h_cnt) * CLR_W'(HEAD_DIM * D_STATE)
+                 + CLR_W'(d_rd[l]) * CLR_W'(D_STATE)
+                 + CLR_W'(t_cnt);
+      hidx_w[l]  = CLR_W'(h_cnt) * CLR_W'(HEAD_DIM * D_STATE)
+                 + CLR_W'(d_rd[l]) * CLR_W'(D_STATE)
+                 + CLR_W'((t_cnt >= T_W'(2)) ? (t_cnt - T_W'(2)) : T_W'(0));
+      x_lane[l]  = {x_buf[h_cnt * HEAD_DIM + d_rd[l]],
+                    {(32 - W_DATA) {1'b0}}};
+    end
 
     case (state)
       H_Z: begin
@@ -241,34 +363,35 @@ module ssm_unit #(
         mul_b = {b_buf[s_cnt], {(32 - W_DATA) {1'b0}}};
       end
 
-      D_INIT: begin
-        mul_a = {d_q[h_cnt], {(32 - W_DATA) {1'b0}}};
-        mul_b = {x_buf[h_cnt * HEAD_DIM + d_cnt], {(32 - W_DATA) {1'b0}}};
-      end
-
-      U0: begin
-        mul_a = dA_q[h_cnt];
-        mul_b = h_state[hidx];
-      end
-
-      U1: begin
-        mul_a = w_buf[s_cnt];
-        mul_b = xd_reg;
-      end
-
-      U2: begin
-        add_a = p1_reg;
-        add_b = mul_y;
-      end
-
-      U3: begin
-        mul_a = add_y;
-        mul_b = {c_buf[s_cnt], {(32 - W_DATA) {1'b0}}};
-      end
-
-      U4: begin
-        add_a = acc_reg;
-        add_b = mul_y;
+      MAC: begin
+        for (int l = 0; l < LANES; l++) begin
+          // m1 = dA*h[t] and m2 = w[t]*x: elements 0..D_STATE-1 (t = s).
+          if (t_cnt < T_W'(D_STATE)) begin
+            m1_a[l] = dA_q[h_cnt];
+            m1_b[l] = h_state[hidx_r[l]];
+            m2_a[l] = w_buf[t_cnt];
+            m2_b[l] = x_lane[l];
+          end
+          // a1 = m1 + m2 (new h) for element t-1.
+          if ((t_cnt >= T_W'(1)) && (t_cnt <= T_W'(D_STATE))) begin
+            a1_a[l] = m1_y[l];
+            a1_b[l] = m2_y[l];
+          end
+          // m3 = D*x (t = 0, first a2 operand) or m3 = a1*C[t-2].
+          if (t_cnt == T_W'(0)) begin
+            m3_a[l] = {d_q[h_cnt], {(32 - W_DATA) {1'b0}}};
+            m3_b[l] = x_lane[l];
+          end else if ((t_cnt >= T_W'(2)) && (t_cnt <= T_W'(D_STATE + 1))) begin
+            m3_a[l] = a1_y[l];
+            m3_b[l] = {c_buf[t_cnt - T_W'(2)], {(32 - W_DATA) {1'b0}}};
+          end
+          // a2 = acc + m3 (output accumulation) for element t-3; the first
+          // add uses the registered D*x, later ones the a2 unit's own output.
+          if ((t_cnt >= T_W'(3)) && (t_cnt <= T_W'(D_STATE + 2))) begin
+            a2_a[l] = (t_cnt == T_W'(3)) ? acc_q[l] : a2_y[l];
+            a2_b[l] = m3_y[l];
+          end
+        end
       end
 
       default: ;
@@ -282,13 +405,16 @@ module ssm_unit #(
       clr_cnt <= '0;
       in_cnt  <= '0;
       h_cnt   <= '0;
-      d_cnt   <= '0;
       s_cnt   <= '0;
+      d_base  <= '0;
+      out_cnt <= '0;
+      t_cnt   <= '0;
       dtp_reg <= '0;
       a_reg   <= '0;
-      xd_reg  <= '0;
-      acc_reg <= '0;
-      p1_reg  <= '0;
+      for (int l = 0; l < LANES; l++) begin
+        acc_q[l]   <= '0;
+        out_buf[l] <= '0;
+      end
     end else begin
       case (state)
         // ---------------------------------------------------- state clear
@@ -319,7 +445,6 @@ module ssm_unit #(
             if (s_axis_tlast || (in_cnt == CNT_W'(TOTAL_BEATS - 1))) begin
               in_cnt <= '0;
               h_cnt  <= '0;
-              d_cnt  <= '0;
               s_cnt  <= '0;
               state  <= H_Z;
             end else begin
@@ -359,60 +484,57 @@ module ssm_unit #(
         W_STORE: begin
           w_buf[s_cnt] <= mul_y;
           if (s_cnt == S_W'(D_STATE - 1)) begin
-            s_cnt <= '0;
-            d_cnt <= '0;
-            state <= D_INIT;
+            s_cnt   <= '0;
+            d_base  <= '0;
+            out_cnt <= '0;
+            t_cnt   <= '0;
+            state   <= MAC;
           end else begin
             s_cnt <= s_cnt + 1'b1;
             state <= W_ISSUE;
           end
         end
 
-        // ---------------------------------------------------- d loop
-        D_INIT: begin
-          xd_reg <= {x_buf[h_cnt * HEAD_DIM + d_cnt], {(32 - W_DATA) {1'b0}}};
-          state  <= D_ACC;
-        end
-        D_ACC: begin
-          acc_reg <= mul_y;   // D_h * x_hd
-          s_cnt   <= '0;
-          state   <= U0;
-        end
-
-        // ---------------------------------------------------- element update
-        U0: state <= U1;                       // issue dA*h
-        U1: begin
-          p1_reg <= mul_y;                     // dA*h
-          state  <= U2;                        // issue w*x
-        end
-        U2: state <= U3;                       // issue newh = p1 + p2
-        U3: begin
-          h_state[hidx] <= add_y;    // newh
-          state <= U4;               // issue newh*C_s
-        end
-        U4: state <= U5;                       // issue acc + newh*C_s
-        U5: begin
-          acc_reg <= add_y;
-          if (s_cnt == S_W'(D_STATE - 1)) begin
-            state <= OUT;          // this (h,d) output is ready
+        // ---------------------------------------------------- element pipeline
+        MAC: begin
+          if (t_cnt == T_W'(D_STATE + 3)) begin
+            // Last a2 result is on the units' outputs; drain to out_buf.
+            for (int l = 0; l < LANES; l++)
+              out_buf[l] <= a2_y[l];
+            t_cnt   <= '0;
+            out_cnt <= '0;
+            state   <= OUT;
           end else begin
-            s_cnt <= s_cnt + 1'b1;
-            state <= U0;
+            t_cnt <= t_cnt + 1'b1;
+            if (t_cnt == T_W'(1))
+              for (int l = 0; l < LANES; l++)
+                acc_q[l] <= m3_y[l];            // registered D*x (t = 0 inputs)
+            if ((t_cnt >= T_W'(2)) && (t_cnt <= T_W'(D_STATE + 1)))
+              for (int l = 0; l < LANES; l++)
+                if (lane_ok[l])
+                  h_state[hidx_w[l]] <= a1_y[l]; // h[s] = new h
           end
         end
 
         // ---------------------------------------------------- output
         OUT: begin
           if (m_axis_tready) begin
-            if (h_cnt == H_W'(NUM_HEADS - 1) && d_cnt == D_W'(HEAD_DIM - 1)) begin
-              state <= IDLE;
-            end else if (d_cnt == D_W'(HEAD_DIM - 1)) begin
-              h_cnt <= h_cnt + 1'b1;
-              d_cnt <= '0;
-              state <= H_Z;
+            if (out_cnt == L_W'(lanes_this - 1'b1)) begin
+              if ((int'(d_base) + LANES) >= HEAD_DIM) begin
+                // Last dim block of this head.
+                if (h_cnt == H_W'(NUM_HEADS - 1)) begin
+                  state <= IDLE;
+                end else begin
+                  h_cnt <= h_cnt + 1'b1;
+                  state <= H_Z;
+                end
+              end else begin
+                d_base <= d_base + D_BW'(LANES);
+                t_cnt  <= '0;
+                state  <= MAC;
+              end
             end else begin
-              d_cnt <= d_cnt + 1'b1;
-              state <= D_INIT;
+              out_cnt <= out_cnt + 1'b1;
             end
           end
         end

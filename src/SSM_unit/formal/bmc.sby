@@ -1,6 +1,7 @@
 # BMC of ssm_unit AXI-Stream framing invariants (FP datapaths abstracted).
-# Small instance: NUM_HEADS=2, HEAD_DIM=1, D_STATE=1 -> XN=2, frame=6 beats;
-# one full activation takes ~80 cycles.
+# Small instance: NUM_HEADS=2, HEAD_DIM=1, D_STATE=1, default LANES=4 ->
+# XN=2, frame=6 beats; one full activation takes ~40 cycles (the pipelined
+# lane MAC issues one element per cycle).
 # Run: sby -f bmc.sby
 
 [tasks]
@@ -9,11 +10,11 @@ bmc
 [options]
 mode bmc
 depth 140
-timeout 300
+timeout 1200
 expect pass
 
 [engines]
-smtbmc
+smtbmc boolector
 
 [script]
 read_verilog -sv fp_pkg.sv

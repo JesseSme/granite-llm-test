@@ -69,3 +69,9 @@
   (max abs 0.0); in-loop full-config 5-token run max_abs 3.906e-03, max_rel
   7.692e-03, 0/3840 outside 2e-2, non-finite 0, in ~66 min (measured
   ~2.3M cycles/token, was ~5.1M).
+
+- SSM lanes rollout (branch opt/ssm-unit): ssm_unit computes LANES=4 output
+  dims per cycle, pipelined 1 element/cycle (bit-identical, see SSM_unit's
+  TODO). Verified: unit 32/32 (max abs 0.0); in-loop identical figures
+  (max abs 3.906e-03, max rel 7.692e-03, 0/3840 outside 2e-2, non-finite 0)
+  at ~1.17M cycles/token (was ~2.3M).
