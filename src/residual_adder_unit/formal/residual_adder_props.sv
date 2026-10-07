@@ -2,8 +2,10 @@
 //
 // The fp_unit datapaths are abstracted (anyseq stubs), so this property
 // verifies the pipeline timing independent of FP arithmetic:
-//   - valid_out is exactly valid_in delayed by three clocks
-//     (MUL register, ADD register, output register) with no stalls.
+//   - valid_out is exactly valid_in delayed by eight clocks. The fp_unit
+//     protocol makes the multiply result valid four cycles after its start
+//     pulse and the add result three cycles after its start, and each output
+//     is registered once more (4 + 3 + 1 = 8) with no stalls.
 //
 // Run: sby -f bmc.sby
 
@@ -30,14 +32,19 @@ module residual_adder_props (
     .valid_out   (valid_out)
   );
 
-  // Suppresses assertions until $past(_, 3) is well-defined.
-  reg [2:0] f_past_valid = 3'b000;
-  always @(posedge clk)
-    f_past_valid <= {f_past_valid[1:0], 1'b1};
+  // Suppresses assertions until $past(_, 8) is well-defined, and requires the
+  // whole 8-cycle window to be out of reset (a mid-window reset would clear
+  // the pipeline and make the delay comparison meaningless).
+  reg [7:0] f_past_valid = 8'b0;
+  reg [8:0] rst_hist = 9'b0;
+  always @(posedge clk) begin
+    f_past_valid <= {f_past_valid[6:0], 1'b1};
+    rst_hist     <= {rst_hist[7:0], rst_n};
+  end
 
   always @(posedge clk) begin
-    if (&f_past_valid && rst_n && $past(rst_n) && $past(rst_n, 2) && $past(rst_n, 3))
-      assert (valid_out == $past(dut_valid_in, 3));
+    if (&f_past_valid && (&rst_hist))
+      assert (valid_out == $past(dut_valid_in, 8));
   end
 
   always @(posedge clk) begin
