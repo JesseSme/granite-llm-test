@@ -178,17 +178,15 @@ module mamba2_unit #(
     .busy(/*unused*/)
   );
 
-  /* verilator lint_off UNUSEDSIGNAL */
-  logic unused_out_valid_mul, unused_out_valid_add;
-  logic unused_out_valid_sqrt, unused_out_valid_div;
-  /* verilator lint_on UNUSEDSIGNAL */
+  logic go_mul, go_add, go_sqrt, go_div;      // 1-cycle in_valid pulses
+  logic mul_ov, add_ov, sqrt_ov, div_ov;      // fp_unit out_valid
 
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_mul (
     .clk(clk), .rst_n(rst_n),
     .mode(fp_pkg::OP_MUL), .rm(fp_pkg::RM_RNE),
     .a(mul_a), .b(mul_b), .c('0),
     .y(mul_y), .cmp(/*unused*/), .flags(/*unused*/),
-    .in_valid(1'b1), .out_valid(unused_out_valid_mul)
+    .in_valid(go_mul), .out_valid(mul_ov)
   );
 
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_add (
@@ -196,7 +194,7 @@ module mamba2_unit #(
     .mode(fp_pkg::OP_ADD), .rm(fp_pkg::RM_RNE),
     .a(add_a), .b(add_b), .c('0),
     .y(add_y), .cmp(/*unused*/), .flags(/*unused*/),
-    .in_valid(1'b1), .out_valid(unused_out_valid_add)
+    .in_valid(go_add), .out_valid(add_ov)
   );
 
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_sqrt (
@@ -204,7 +202,7 @@ module mamba2_unit #(
     .mode(fp_pkg::OP_SQRT), .rm(fp_pkg::RM_RNE),
     .a(sqrt_a), .b('0), .c('0),
     .y(sqrt_y), .cmp(/*unused*/), .flags(/*unused*/),
-    .in_valid(1'b1), .out_valid(unused_out_valid_sqrt)
+    .in_valid(go_sqrt), .out_valid(sqrt_ov)
   );
 
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_div (
@@ -212,7 +210,7 @@ module mamba2_unit #(
     .mode(fp_pkg::OP_DIV), .rm(fp_pkg::RM_RNE),
     .a(div_a), .b(div_b), .c('0),
     .y(div_y), .cmp(/*unused*/), .flags(/*unused*/),
-    .in_valid(1'b1), .out_valid(unused_out_valid_div)
+    .in_valid(go_div), .out_valid(div_ov)
   );
   /* verilator lint_on UNUSEDSIGNAL */
   /* verilator lint_on PINCONNECTEMPTY */
@@ -263,27 +261,27 @@ module mamba2_unit #(
     div_a = '0; div_b = '0;
 
     case (state)
-      N_SQ1: begin
+      // Operands are held through the first WAIT cycle (the go pulse is
+      // registered); in_valid (go_*) is only asserted in the REQ state.
+      N_SQ1, N_SQ1_W: begin
         mul_a = ssm_buf[sq_cnt];
         mul_b = gsilu[sq_cnt];
       end
-      N_OUT1: begin
+      N_OUT1, N_OUT1_W: begin
         mul_a = ssm_buf[out_cnt];
         mul_b = gsilu[out_cnt];
       end
-      N_SQ2: begin
-        mul_a = xn_reg; mul_b = xn_reg;
-      end
-      N_SQ3: begin
+      N_SQ2, N_SQ2_W: begin mul_a = xn_reg; mul_b = xn_reg; end
+      N_SQ3, N_SQ3_W: begin
         add_a = (sq_cnt == 12'd0) ? 32'h0 : sumsq_reg;
         add_b = sq_reg;
       end
-      N_MEAN: begin div_a = sumsq_reg; div_b = C_N; end
-      N_EPS:  begin add_a = mean_reg;  add_b = C_EPS; end
-      N_SQRT: sqrt_a = var_reg;
-      N_RSQ:  begin div_a = C_ONE; div_b = rms_reg; end
-      N_OUT2: begin mul_a = xn_reg; mul_b = rsq_reg; end
-      N_OUT3: begin mul_a = t_reg;  mul_b = {norm_w[out_cnt], 16'b0}; end
+      N_MEAN, N_MEAN_W: begin div_a = sumsq_reg; div_b = C_N; end
+      N_EPS,  N_EPS_W:  begin add_a = mean_reg;  add_b = C_EPS; end
+      N_SQRT, N_SQRT_W: sqrt_a = var_reg;
+      N_RSQ,  N_RSQ_W:  begin div_a = C_ONE; div_b = rms_reg; end
+      N_OUT2, N_OUT2_W: begin mul_a = xn_reg; mul_b = rsq_reg; end
+      N_OUT3, N_OUT3_W: begin mul_a = t_reg;  mul_b = {norm_w[out_cnt], 16'b0}; end
       default: ;
     endcase
   end
@@ -326,6 +324,7 @@ module mamba2_unit #(
       xn_reg    <= '0;  sq_reg  <= '0;  sumsq_reg <= '0;
       mean_reg  <= '0;  var_reg <= '0;  rms_reg <= '0;
       rsq_reg   <= '0;  t_reg   <= '0;  out_reg <= '0;
+      go_mul    <= 1'b0; go_add <= 1'b0; go_sqrt <= 1'b0; go_div <= 1'b0;
     end else begin
       case (state)
         // -------------------------------------------------- input frame
@@ -433,39 +432,69 @@ module mamba2_unit #(
         end
 
         // -------------------------------------------------- gated norm: sum of squares
-        N_SQ1:   state <= N_SQ1_W;
-        N_SQ1_W: begin xn_reg <= mul_y; state <= N_SQ2; end
-        N_SQ2:   state <= N_SQ2_W;
-        N_SQ2_W: begin sq_reg <= mul_y; state <= N_SQ3; end
-        N_SQ3:   state <= N_SQ3_W;
+        N_SQ1: begin go_mul <= 1'b1; state <= N_SQ1_W; end
+        N_SQ1_W: begin
+          if (go_mul) go_mul <= 1'b0;
+          else if (mul_ov) begin xn_reg <= mul_y; state <= N_SQ2; end
+        end
+        N_SQ2: begin go_mul <= 1'b1; state <= N_SQ2_W; end
+        N_SQ2_W: begin
+          if (go_mul) go_mul <= 1'b0;
+          else if (mul_ov) begin sq_reg <= mul_y; state <= N_SQ3; end
+        end
+        N_SQ3: begin go_add <= 1'b1; state <= N_SQ3_W; end
         N_SQ3_W: begin
-          sumsq_reg <= add_y;
-          if (sq_cnt == 12'(INTER - 1)) begin
-            sq_cnt <= '0;
-            state  <= N_MEAN;
-          end else begin
-            sq_cnt <= sq_cnt + 1'b1;
-            state  <= N_SQ1;
+          if (go_add) go_add <= 1'b0;
+          else if (add_ov) begin
+            sumsq_reg <= add_y;
+            if (sq_cnt == 12'(INTER - 1)) begin
+              sq_cnt <= '0;
+              state  <= N_MEAN;
+            end else begin
+              sq_cnt <= sq_cnt + 1'b1;
+              state  <= N_SQ1;
+            end
           end
         end
 
         // -------------------------------------------------- rms / reciprocal
-        N_MEAN:   state <= N_MEAN_W;
-        N_MEAN_W: begin mean_reg <= div_y; state <= N_EPS; end
-        N_EPS:    state <= N_EPS_W;
-        N_EPS_W:  begin var_reg <= add_y; state <= N_SQRT; end
-        N_SQRT:   state <= N_SQRT_W;
-        N_SQRT_W: begin rms_reg <= sqrt_y; state <= N_RSQ; end
-        N_RSQ:    state <= N_RSQ_W;
-        N_RSQ_W:  begin rsq_reg <= div_y; out_cnt <= '0; state <= N_OUT1; end
+        N_MEAN: begin go_div <= 1'b1; state <= N_MEAN_W; end
+        N_MEAN_W: begin
+          if (go_div) go_div <= 1'b0;
+          else if (div_ov) begin mean_reg <= div_y; state <= N_EPS; end
+        end
+        N_EPS: begin go_add <= 1'b1; state <= N_EPS_W; end
+        N_EPS_W: begin
+          if (go_add) go_add <= 1'b0;
+          else if (add_ov) begin var_reg <= add_y; state <= N_SQRT; end
+        end
+        N_SQRT: begin go_sqrt <= 1'b1; state <= N_SQRT_W; end
+        N_SQRT_W: begin
+          if (go_sqrt) go_sqrt <= 1'b0;
+          else if (sqrt_ov) begin rms_reg <= sqrt_y; state <= N_RSQ; end
+        end
+        N_RSQ: begin go_div <= 1'b1; state <= N_RSQ_W; end
+        N_RSQ_W: begin
+          if (go_div) go_div <= 1'b0;
+          else if (div_ov) begin rsq_reg <= div_y; out_cnt <= '0; state <= N_OUT1; end
+        end
 
         // -------------------------------------------------- norm output -> out_proj
-        N_OUT1:   state <= N_OUT1_W;
-        N_OUT1_W: begin xn_reg <= mul_y; state <= N_OUT2; end
-        N_OUT2:   state <= N_OUT2_W;
-        N_OUT2_W: begin t_reg <= mul_y; state <= N_OUT3; end
-        N_OUT3:   state <= N_OUT3_W;
-        N_OUT3_W: begin out_reg <= norm_out_bf; state <= N_OUT4; end
+        N_OUT1: begin go_mul <= 1'b1; state <= N_OUT1_W; end
+        N_OUT1_W: begin
+          if (go_mul) go_mul <= 1'b0;
+          else if (mul_ov) begin xn_reg <= mul_y; state <= N_OUT2; end
+        end
+        N_OUT2: begin go_mul <= 1'b1; state <= N_OUT2_W; end
+        N_OUT2_W: begin
+          if (go_mul) go_mul <= 1'b0;
+          else if (mul_ov) begin t_reg <= mul_y; state <= N_OUT3; end
+        end
+        N_OUT3: begin go_mul <= 1'b1; state <= N_OUT3_W; end
+        N_OUT3_W: begin
+          if (go_mul) go_mul <= 1'b0;
+          else if (mul_ov) begin out_reg <= norm_out_bf; state <= N_OUT4; end
+        end
         N_OUT4: begin
           if (out_cnt == 12'(INTER - 1)) begin
             out_cnt <= '0; o_cnt <= '0;
