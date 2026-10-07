@@ -33,6 +33,9 @@ RTL_SRCS = [FP_RTL / f for f in (
     "fp_sqrt.sv", "fp_fma.sv", "fp_minmax.sv", "fp_cmp.sv",
     "fp_totalorder.sv", "fp_roundint.sv", "fp32_to_bf16_round.sv",
     "fp_unit.sv",
+    "fp_add_pipe.sv", "fp_mul_pipe.sv", "fp_mul_core.sv",
+    "fp_fma_pipe.sv", "fp_minmax_pipe.sv", "fp_cmp_pipe.sv",
+    "fp_totalorder_pipe.sv", "fp_roundint_pipe.sv", "fp_divsqrt_iter.sv",
 )] + [
     ROOT / "fp_softplus_seq.sv",
     ROOT / "fp_exp_seq.sv",
