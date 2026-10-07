@@ -11,14 +11,20 @@
 // LLM_LAYER_DESCRIPTION.md §1).
 //
 // Streaming: one token in (valid_in, accepted when idle), DIM elements out
-// (valid_out, one per cycle). The shared fp_unit performs the bfloat16
-// multiply by 12.0 (exactly representable, so the result matches PyTorch's
-// bfloat16 scalar multiply).
+// (valid_out, one per cycle after a 4-cycle pipeline fill). The shared fp_unit
+// performs the bfloat16 multiply by 12.0 (exactly representable, so the result
+// matches PyTorch's bfloat16 scalar multiply).
 //
-// FSM: IDLE -> OUT (DIM cycles) -> DONE -> IDLE.
-//   IDLE: accept token, issue MUL for element 0
-//   OUT : emit element cnt (registered fp_unit result), issue MUL for cnt+1
-//   DONE: final element is emitted (valid_out held), busy deasserts
+// fp_unit protocol: one MUL transaction per output element, started by a
+// 1-cycle in_valid pulse; fp_mul_pipe accepts a start every cycle and this
+// unit issues element i+1 while element i's result travels through the
+// 4-cycle pipeline, so the element-per-cycle output throughput is preserved.
+// The scaling is exactly representable, so results are unchanged.
+//
+// bfloat16 format note: this unit instantiates fp_unit at W_MANT = 7 (BF16);
+// the pipelined datapaths share the same latencies as fp32 (MUL 4, ADD 3).
+//
+// FSM: IDLE -> OUT (issue ahead + emit) -> DONE -> IDLE.
 
 /* verilator lint_off WIDTHEXPAND */
 /* verilator lint_off WIDTHTRUNC */
@@ -64,10 +70,11 @@ module embedding_lookup_unit #(
   fp_pkg::rounding_t fpu_rm;
   logic [W_DATA-1:0] fpu_a, fpu_b, fpu_c;
   logic [W_DATA-1:0] fpu_y;
+  logic              fpu_start;
   /* verilator lint_off UNUSEDSIGNAL */
   logic [1:0]        fpu_cmp;
   logic [4:0]        fpu_flags;
-  logic              unused_out_valid_fp;
+  logic              fpu_out_valid;
   /* verilator lint_on UNUSEDSIGNAL */
 
   fp_unit #(.W_EXP(8), .W_MANT(7)) u_fp (
@@ -75,7 +82,7 @@ module embedding_lookup_unit #(
     .mode(fpu_mode), .rm(fpu_rm),
     .a(fpu_a), .b(fpu_b), .c(fpu_c),
     .y(fpu_y), .cmp(fpu_cmp), .flags(fpu_flags),
-    .in_valid(1'b1), .out_valid(unused_out_valid_fp)
+    .in_valid(fpu_start), .out_valid(fpu_out_valid)
   );
 
   // ---------------------------------------------------------------- FSM
@@ -87,32 +94,48 @@ module embedding_lookup_unit #(
 
   state_t state;
   logic [T_W-1:0] token;
-  logic [D_W-1:0] cnt;
+  logic [D_W-1:0] cnt;    // element being emitted
+  logic [D_W-1:0] iss;    // element being issued (cnt + pipeline depth)
+
+  // MUL issue: element 0 while accepting the token, then element iss while
+  // streaming out; the multiply is exactly representable, so the result is
+  // unchanged. Only DIM elements are issued.
+  wire issue_now = (state == IDLE && valid_in) || (state == OUT && iss < D_W'(DIM));
 
   always_comb begin
     fpu_rm   = fp_pkg::RM_RNE;
     fpu_mode = fp_pkg::OP_MUL;
-    fpu_a    = '0;
     fpu_b    = SCALE_12;
     fpu_c    = '0;
+    fpu_a    = '0;
 
-    if (state == IDLE && valid_in) begin
+    if (state == IDLE && valid_in)
       fpu_a = embed_mem[token_id][0];
-    end else if (state == OUT && cnt != D_W'(DIM - 1)) begin
-      fpu_a = embed_mem[token][cnt + 1'b1];
-    end
+    else if (state == OUT && iss < D_W'(DIM))
+      fpu_a = embed_mem[token][iss];
   end
 
+  assign fpu_start = issue_now;
+
+  // Result valid pipeline: fp_mul_pipe's binary32/BF16 latency is 4 cycles
+  // from the start cycle to the result cycle.
+  logic [3:0] dv;
   always_ff @(posedge clk) begin
     if (!rst_n) begin
       state     <= IDLE;
       token     <= '0;
       cnt       <= '0;
+      iss       <= '0;
       data_out  <= '0;
       valid_out <= 1'b0;
       busy      <= 1'b0;
+      dv        <= 4'b0;
     end else begin
       valid_out <= 1'b0;
+      dv[0]     <= issue_now;
+      dv[1]     <= dv[0];
+      dv[2]     <= dv[1];
+      dv[3]     <= dv[2];
 
       case (state)
         // ------------------------------------------------------------ IDLE
@@ -121,25 +144,27 @@ module embedding_lookup_unit #(
           if (valid_in) begin
             token <= token_id;
             cnt   <= '0;
+            iss   <= D_W'(1);
             state <= OUT;
             busy  <= 1'b1;
           end
         end
 
         // ------------------------------------------------------------- OUT
-        // Emit the fp_unit result issued in the previous cycle, and issue the
-        // multiply for the next element.
         OUT: begin
-          data_out  <= fpu_y;
-          valid_out <= 1'b1;
-          if (cnt == D_W'(DIM - 1))
-            state <= DONE;
-          else
-            cnt <= cnt + 1'b1;
+          if (issue_now)
+            iss <= iss + 1'b1;
+          if (dv[3]) begin
+            data_out  <= fpu_y;
+            valid_out <= 1'b1;
+            if (cnt == D_W'(DIM - 1))
+              state <= DONE;
+            else
+              cnt <= cnt + 1'b1;
+          end
         end
 
         // ------------------------------------------------------------ DONE
-        // Final element is on data_out/valid_out this cycle.
         DONE: begin
           state <= IDLE;
           busy  <= 1'b0;

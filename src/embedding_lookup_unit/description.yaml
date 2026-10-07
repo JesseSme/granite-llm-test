@@ -78,8 +78,9 @@ max_clock_speed: 300 MHz (estimated; critical path is the shared fp_unit MUL plu
 
 characteristics:
   latency: >
-    DIM + ~3 cycles per token (IDLE accept, then one element per cycle through the
-    fp_unit MUL pipeline). For DIM=768: ~771 cycles.
+    DIM + ~5 cycles per token (IDLE accept, then one element per cycle through the
+    fp_unit MUL pipeline with a 4-cycle result pipeline fill). For DIM=768: ~773
+    cycles.
   throughput: 1 output element per cycle while streaming (768 elements per token)
   resource_usage: >
     Parameterized (VOCAB x DIM) x 16-bit table memory (100352 x 768 x 16 bit = 154 MB
@@ -89,6 +90,11 @@ characteristics:
     Token IDs are latched on accept and the row is streamed in order. The scaling
     factor 12.0 is exactly representable in bfloat16 (0x4140), so the fp_unit MUL
     result matches PyTorch's bfloat16 scalar multiply bit-exactly.
+    fp_unit protocol migration: one MUL transaction per output element (1-cycle
+    in_valid pulse, result latched on out_valid, MUL latency 4). The unit issues
+    element i+1 while element i's result travels through the 4-cycle pipeline, so
+    the one-element-per-cycle output throughput is preserved and results are
+    unchanged.
     Table writes are not gated against lookups; weights must be loaded before the
     first valid_in (load interface is intended for pre-loading/baking weights).
   unit_verification: >
@@ -102,4 +108,5 @@ characteristics:
     formal/bmc.sby (SymbiYosys BMC, depth 32, fp_unit abstracted via an anyseq stub)
     proves: output only while busy, at most DIM outputs per token, busy rises only
     after an accepted input, and busy falls only after exactly DIM outputs.
-    Run: sby -f bmc.sby.
+    Run: sby -f bmc.sby. Unit test, in-loop test and formal re-run PASS after the
+    fp_unit protocol migration.
