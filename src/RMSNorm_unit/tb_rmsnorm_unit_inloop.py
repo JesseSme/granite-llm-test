@@ -59,7 +59,9 @@ async def feed_input(dut, input_u16):
     dut.data_in.value = 0
 
 
-async def collect_output(dut, expected_count, max_cycles=20000):
+async def collect_output(dut, expected_count, max_cycles=400000):
+    # The pipelined fp_unit's iterative divider serializes the per-element
+    # DIV/MUL (17 + 4 cycles), so a full vector takes ~25 x WIDTH cycles.
     collected = []
     for _ in range(max_cycles):
         await RisingEdge(dut.clk)

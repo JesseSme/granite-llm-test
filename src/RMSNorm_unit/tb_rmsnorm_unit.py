@@ -73,7 +73,9 @@ async def feed_input(dut, input_data):
     dut._log.info("Input fed")
 
 
-async def wait_for_output(dut, expected_count, max_cycles=10000):
+async def wait_for_output(dut, expected_count, max_cycles=200000):
+    # The pipelined fp_unit's iterative divider serializes the per-element
+    # DIV/MUL (17 + 4 cycles), so a full vector takes ~25 x WIDTH cycles.
     """Wait for output values and collect them."""
     output_collected = []
     
