@@ -1,0 +1,1043 @@
+===== FORMAL embedding_lookup_unit
+SBY 10:53:34 [bmc_bmc] Removing directory '/home/jese/tinyllm/src/embedding_lookup_unit/formal/bmc_bmc'.
+SBY 10:53:34 [bmc_bmc] Copy '/home/jese/tinyllm/src/embedding_lookup_unit/formal/../../../systemverilog_fp_unit/rtl/fp_pkg.sv' to '/home/jese/tinyllm/src/embedding_lookup_unit/formal/bmc_bmc/src/fp_pkg.sv'.
+SBY 10:53:34 [bmc_bmc] Copy '/home/jese/tinyllm/src/embedding_lookup_unit/formal/fp_unit_stub.sv' to '/home/jese/tinyllm/src/embedding_lookup_unit/formal/bmc_bmc/src/fp_unit_stub.sv'.
+SBY 10:53:34 [bmc_bmc] Copy '/home/jese/tinyllm/src/embedding_lookup_unit/formal/../embedding_lookup_unit.sv' to '/home/jese/tinyllm/src/embedding_lookup_unit/formal/bmc_bmc/src/embedding_lookup_unit.sv'.
+SBY 10:53:34 [bmc_bmc] Copy '/home/jese/tinyllm/src/embedding_lookup_unit/formal/embedding_lookup_props.sv' to '/home/jese/tinyllm/src/embedding_lookup_unit/formal/bmc_bmc/src/embedding_lookup_props.sv'.
+SBY 10:53:34 [bmc_bmc] engine_0: smtbmc
+SBY 10:53:34 [bmc_bmc] base: starting process "cd bmc_bmc/src; yosys -ql ../model/design.log ../model/design.ys"
+SBY 10:53:35 [bmc_bmc] base: finished (returncode=0)
+SBY 10:53:35 [bmc_bmc] prep: starting process "cd bmc_bmc/model; yosys -ql design_prep.log design_prep.ys"
+SBY 10:53:35 [bmc_bmc] prep: finished (returncode=0)
+SBY 10:53:35 [bmc_bmc] smt2: starting process "cd bmc_bmc/model; yosys -ql design_smt2.log design_smt2.ys"
+SBY 10:53:35 [bmc_bmc] smt2: finished (returncode=0)
+SBY 10:53:35 [bmc_bmc] engine_0: starting process "cd bmc_bmc; yosys-smtbmc --presat --unroll --noprogress -t 32  --append 0 --dump-vcd engine_0/trace.vcd --dump-yw engine_0/trace.yw --dump-vlogtb engine_0/trace_tb.v --dump-smtc engine_0/trace.smtc model/design_smt2.smt2"
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Solver: yices
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 0..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 0..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 1..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 1..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 2..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 2..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 3..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 3..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 4..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 4..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 5..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 5..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 6..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 6..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 7..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 7..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 8..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 8..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 9..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 9..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 10..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 10..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 11..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 11..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 12..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 12..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 13..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 13..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 14..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 14..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 15..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 15..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 16..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 16..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 17..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 17..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 18..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 18..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 19..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 19..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 20..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 20..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 21..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 21..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 22..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 22..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 23..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 23..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 24..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 24..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 25..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 25..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 26..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 26..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 27..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 27..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 28..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 28..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 29..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 29..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 30..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 30..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 31..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 31..
+SBY 10:53:35 [bmc_bmc] engine_0: ##   0:00:00  Status: passed
+SBY 10:53:35 [bmc_bmc] engine_0: finished (returncode=0)
+SBY 10:53:35 [bmc_bmc] engine_0: Status returned by engine: pass
+SBY 10:53:35 [bmc_bmc] summary: Elapsed clock time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 10:53:35 [bmc_bmc] summary: Elapsed process time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 10:53:35 [bmc_bmc] summary: engine_0 (smtbmc) returned pass
+SBY 10:53:35 [bmc_bmc] summary: engine_0 did not produce any traces
+SBY 10:53:35 [bmc_bmc] DONE (PASS, rc=0)
+----- embedding_lookup_unit rc=0
+===== FORMAL conv1d_unit
+SBY 10:53:35 [bmc_bmc] Removing directory '/home/jese/tinyllm/src/conv1d_unit/formal/bmc_bmc'.
+SBY 10:53:35 [bmc_bmc] Copy '/home/jese/tinyllm/src/conv1d_unit/formal/../../../systemverilog_fp_unit/rtl/fp_pkg.sv' to '/home/jese/tinyllm/src/conv1d_unit/formal/bmc_bmc/src/fp_pkg.sv'.
+SBY 10:53:35 [bmc_bmc] Copy '/home/jese/tinyllm/src/conv1d_unit/formal/../../../systemverilog_fp_unit/rtl/fp32_to_bf16_round.sv' to '/home/jese/tinyllm/src/conv1d_unit/formal/bmc_bmc/src/fp32_to_bf16_round.sv'.
+SBY 10:53:35 [bmc_bmc] Copy '/home/jese/tinyllm/src/conv1d_unit/formal/fp_unit_stub.sv' to '/home/jese/tinyllm/src/conv1d_unit/formal/bmc_bmc/src/fp_unit_stub.sv'.
+SBY 10:53:35 [bmc_bmc] Copy '/home/jese/tinyllm/src/conv1d_unit/formal/../conv1d_unit.sv' to '/home/jese/tinyllm/src/conv1d_unit/formal/bmc_bmc/src/conv1d_unit.sv'.
+SBY 10:53:35 [bmc_bmc] Copy '/home/jese/tinyllm/src/conv1d_unit/formal/conv1d_props.sv' to '/home/jese/tinyllm/src/conv1d_unit/formal/bmc_bmc/src/conv1d_props.sv'.
+SBY 10:53:35 [bmc_bmc] engine_0: smtbmc
+SBY 10:53:35 [bmc_bmc] base: starting process "cd bmc_bmc/src; yosys -ql ../model/design.log ../model/design.ys"
+SBY 10:53:35 [bmc_bmc] base: Warning: Replacing memory \buf_rd with list of registers. See conv1d_unit.sv:154
+SBY 10:53:35 [bmc_bmc] base: finished (returncode=0)
+SBY 10:53:35 [bmc_bmc] prep: starting process "cd bmc_bmc/model; yosys -ql design_prep.log design_prep.ys"
+SBY 10:53:35 [bmc_bmc] prep: finished (returncode=0)
+SBY 10:53:35 [bmc_bmc] smt2: starting process "cd bmc_bmc/model; yosys -ql design_smt2.log design_smt2.ys"
+SBY 10:53:35 [bmc_bmc] smt2: finished (returncode=0)
+SBY 10:53:35 [bmc_bmc] engine_0: starting process "cd bmc_bmc; yosys-smtbmc --presat --unroll --noprogress -t 120  --append 0 --dump-vcd engine_0/trace.vcd --dump-yw engine_0/trace.yw --dump-vlogtb engine_0/trace_tb.v --dump-smtc engine_0/trace.smtc model/design_smt2.smt2"
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Solver: yices
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 0..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 0..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 1..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 1..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 2..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 2..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 3..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 3..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 4..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 4..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 5..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 5..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 6..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 6..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 7..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 7..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 8..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 8..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 9..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 9..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 10..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 10..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 11..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 11..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 12..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 12..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 13..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 13..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 14..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 14..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 15..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 15..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 16..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 16..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 17..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 17..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 18..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 18..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 19..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 19..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 20..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 20..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 21..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 21..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 22..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 22..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 23..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 23..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 24..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 24..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 25..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 25..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 26..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 26..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 27..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 27..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 28..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 28..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 29..
+SBY 10:53:36 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 29..
+SBY 10:53:37 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 30..
+SBY 10:53:37 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 30..
+SBY 10:53:37 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 31..
+SBY 10:53:37 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 31..
+SBY 10:53:37 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 32..
+SBY 10:53:37 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 32..
+SBY 10:53:37 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 33..
+SBY 10:53:37 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 33..
+SBY 10:53:37 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 34..
+SBY 10:53:37 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 34..
+SBY 10:53:37 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 35..
+SBY 10:53:37 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 35..
+SBY 10:53:37 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 36..
+SBY 10:53:37 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 36..
+SBY 10:53:37 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 37..
+SBY 10:53:37 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 37..
+SBY 10:53:37 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 38..
+SBY 10:53:37 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 38..
+SBY 10:53:38 [bmc_bmc] engine_0: ##   0:00:02  Checking assumptions in step 39..
+SBY 10:53:38 [bmc_bmc] engine_0: ##   0:00:02  Checking assertions in step 39..
+SBY 10:53:38 [bmc_bmc] engine_0: ##   0:00:02  Checking assumptions in step 40..
+SBY 10:53:38 [bmc_bmc] engine_0: ##   0:00:02  Checking assertions in step 40..
+SBY 10:53:38 [bmc_bmc] engine_0: ##   0:00:02  Checking assumptions in step 41..
+SBY 10:53:38 [bmc_bmc] engine_0: ##   0:00:02  Checking assertions in step 41..
+SBY 10:53:38 [bmc_bmc] engine_0: ##   0:00:02  Checking assumptions in step 42..
+SBY 10:53:38 [bmc_bmc] engine_0: ##   0:00:02  Checking assertions in step 42..
+SBY 10:53:39 [bmc_bmc] engine_0: ##   0:00:03  Checking assumptions in step 43..
+SBY 10:53:39 [bmc_bmc] engine_0: ##   0:00:03  Checking assertions in step 43..
+SBY 10:53:39 [bmc_bmc] engine_0: ##   0:00:03  Checking assumptions in step 44..
+SBY 10:53:39 [bmc_bmc] engine_0: ##   0:00:03  Checking assertions in step 44..
+SBY 10:53:39 [bmc_bmc] engine_0: ##   0:00:03  Checking assumptions in step 45..
+SBY 10:53:39 [bmc_bmc] engine_0: ##   0:00:03  Checking assertions in step 45..
+SBY 10:53:40 [bmc_bmc] engine_0: ##   0:00:03  Checking assumptions in step 46..
+SBY 10:53:40 [bmc_bmc] engine_0: ##   0:00:03  Checking assertions in step 46..
+SBY 10:53:40 [bmc_bmc] engine_0: ##   0:00:04  Checking assumptions in step 47..
+SBY 10:53:40 [bmc_bmc] engine_0: ##   0:00:04  Checking assertions in step 47..
+SBY 10:53:40 [bmc_bmc] engine_0: ##   0:00:04  Checking assumptions in step 48..
+SBY 10:53:40 [bmc_bmc] engine_0: ##   0:00:04  Checking assertions in step 48..
+SBY 10:53:41 [bmc_bmc] engine_0: ##   0:00:05  Checking assumptions in step 49..
+SBY 10:53:41 [bmc_bmc] engine_0: ##   0:00:05  Checking assertions in step 49..
+SBY 10:53:41 [bmc_bmc] engine_0: ##   0:00:05  Checking assumptions in step 50..
+SBY 10:53:41 [bmc_bmc] engine_0: ##   0:00:05  Checking assertions in step 50..
+SBY 10:53:42 [bmc_bmc] engine_0: ##   0:00:06  Checking assumptions in step 51..
+SBY 10:53:42 [bmc_bmc] engine_0: ##   0:00:06  Checking assertions in step 51..
+SBY 10:53:42 [bmc_bmc] engine_0: ##   0:00:06  Checking assumptions in step 52..
+SBY 10:53:42 [bmc_bmc] engine_0: ##   0:00:06  Checking assertions in step 52..
+SBY 10:53:43 [bmc_bmc] engine_0: ##   0:00:07  Checking assumptions in step 53..
+SBY 10:53:43 [bmc_bmc] engine_0: ##   0:00:07  Checking assertions in step 53..
+SBY 10:53:43 [bmc_bmc] engine_0: ##   0:00:07  Checking assumptions in step 54..
+SBY 10:53:43 [bmc_bmc] engine_0: ##   0:00:07  Checking assertions in step 54..
+SBY 10:53:44 [bmc_bmc] engine_0: ##   0:00:08  Checking assumptions in step 55..
+SBY 10:53:44 [bmc_bmc] engine_0: ##   0:00:08  Checking assertions in step 55..
+SBY 10:53:45 [bmc_bmc] engine_0: ##   0:00:08  Checking assumptions in step 56..
+SBY 10:53:45 [bmc_bmc] engine_0: ##   0:00:08  Checking assertions in step 56..
+SBY 10:53:45 [bmc_bmc] engine_0: ##   0:00:09  Checking assumptions in step 57..
+SBY 10:53:45 [bmc_bmc] engine_0: ##   0:00:09  Checking assertions in step 57..
+SBY 10:53:46 [bmc_bmc] engine_0: ##   0:00:10  Checking assumptions in step 58..
+SBY 10:53:46 [bmc_bmc] engine_0: ##   0:00:10  Checking assertions in step 58..
+SBY 10:53:47 [bmc_bmc] engine_0: ##   0:00:11  Checking assumptions in step 59..
+SBY 10:53:47 [bmc_bmc] engine_0: ##   0:00:11  Checking assertions in step 59..
+SBY 10:53:47 [bmc_bmc] engine_0: ##   0:00:11  Checking assumptions in step 60..
+SBY 10:53:47 [bmc_bmc] engine_0: ##   0:00:11  Checking assertions in step 60..
+SBY 10:53:48 [bmc_bmc] engine_0: ##   0:00:12  Checking assumptions in step 61..
+SBY 10:53:48 [bmc_bmc] engine_0: ##   0:00:12  Checking assertions in step 61..
+SBY 10:53:49 [bmc_bmc] engine_0: ##   0:00:13  Checking assumptions in step 62..
+SBY 10:53:49 [bmc_bmc] engine_0: ##   0:00:13  Checking assertions in step 62..
+SBY 10:53:50 [bmc_bmc] engine_0: ##   0:00:14  Checking assumptions in step 63..
+SBY 10:53:50 [bmc_bmc] engine_0: ##   0:00:14  Checking assertions in step 63..
+SBY 10:53:51 [bmc_bmc] engine_0: ##   0:00:15  Checking assumptions in step 64..
+SBY 10:53:51 [bmc_bmc] engine_0: ##   0:00:15  Checking assertions in step 64..
+SBY 10:53:52 [bmc_bmc] engine_0: ##   0:00:16  Checking assumptions in step 65..
+SBY 10:53:52 [bmc_bmc] engine_0: ##   0:00:16  Checking assertions in step 65..
+SBY 10:53:51 [bmc_bmc] engine_0: ##   0:00:15  Checking assumptions in step 66..
+SBY 10:53:51 [bmc_bmc] engine_0: ##   0:00:15  Checking assertions in step 66..
+SBY 10:53:52 [bmc_bmc] engine_0: ##   0:00:16  Checking assumptions in step 67..
+SBY 10:53:52 [bmc_bmc] engine_0: ##   0:00:16  Checking assertions in step 67..
+SBY 10:53:53 [bmc_bmc] engine_0: ##   0:00:17  Checking assumptions in step 68..
+SBY 10:53:53 [bmc_bmc] engine_0: ##   0:00:17  Checking assertions in step 68..
+SBY 10:53:55 [bmc_bmc] engine_0: ##   0:00:19  Checking assumptions in step 69..
+SBY 10:53:55 [bmc_bmc] engine_0: ##   0:00:19  Checking assertions in step 69..
+SBY 10:53:56 [bmc_bmc] engine_0: ##   0:00:20  Checking assumptions in step 70..
+SBY 10:53:56 [bmc_bmc] engine_0: ##   0:00:20  Checking assertions in step 70..
+SBY 10:53:57 [bmc_bmc] engine_0: ##   0:00:21  Checking assumptions in step 71..
+SBY 10:53:57 [bmc_bmc] engine_0: ##   0:00:21  Checking assertions in step 71..
+SBY 10:53:59 [bmc_bmc] engine_0: ##   0:00:23  Checking assumptions in step 72..
+SBY 10:53:59 [bmc_bmc] engine_0: ##   0:00:23  Checking assertions in step 72..
+SBY 10:54:00 [bmc_bmc] engine_0: ##   0:00:24  Checking assumptions in step 73..
+SBY 10:54:00 [bmc_bmc] engine_0: ##   0:00:24  Checking assertions in step 73..
+SBY 10:54:02 [bmc_bmc] engine_0: ##   0:00:26  Checking assumptions in step 74..
+SBY 10:54:02 [bmc_bmc] engine_0: ##   0:00:26  Checking assertions in step 74..
+SBY 10:54:03 [bmc_bmc] engine_0: ##   0:00:27  Checking assumptions in step 75..
+SBY 10:54:03 [bmc_bmc] engine_0: ##   0:00:27  Checking assertions in step 75..
+SBY 10:54:05 [bmc_bmc] engine_0: ##   0:00:29  Checking assumptions in step 76..
+SBY 10:54:05 [bmc_bmc] engine_0: ##   0:00:29  Checking assertions in step 76..
+SBY 10:54:07 [bmc_bmc] engine_0: ##   0:00:31  Checking assumptions in step 77..
+SBY 10:54:07 [bmc_bmc] engine_0: ##   0:00:31  Checking assertions in step 77..
+SBY 10:54:09 [bmc_bmc] engine_0: ##   0:00:33  Checking assumptions in step 78..
+SBY 10:54:09 [bmc_bmc] engine_0: ##   0:00:33  Checking assertions in step 78..
+SBY 10:54:11 [bmc_bmc] engine_0: ##   0:00:35  Checking assumptions in step 79..
+SBY 10:54:11 [bmc_bmc] engine_0: ##   0:00:35  Checking assertions in step 79..
+SBY 10:54:13 [bmc_bmc] engine_0: ##   0:00:37  Checking assumptions in step 80..
+SBY 10:54:13 [bmc_bmc] engine_0: ##   0:00:37  Checking assertions in step 80..
+SBY 10:54:15 [bmc_bmc] engine_0: ##   0:00:39  Checking assumptions in step 81..
+SBY 10:54:15 [bmc_bmc] engine_0: ##   0:00:39  Checking assertions in step 81..
+SBY 10:54:17 [bmc_bmc] engine_0: ##   0:00:41  Checking assumptions in step 82..
+SBY 10:54:17 [bmc_bmc] engine_0: ##   0:00:41  Checking assertions in step 82..
+SBY 10:54:19 [bmc_bmc] engine_0: ##   0:00:43  Checking assumptions in step 83..
+SBY 10:54:19 [bmc_bmc] engine_0: ##   0:00:43  Checking assertions in step 83..
+SBY 10:54:22 [bmc_bmc] engine_0: ##   0:00:46  Checking assumptions in step 84..
+SBY 10:54:22 [bmc_bmc] engine_0: ##   0:00:46  Checking assertions in step 84..
+SBY 10:54:21 [bmc_bmc] engine_0: ##   0:00:45  Checking assumptions in step 85..
+SBY 10:54:21 [bmc_bmc] engine_0: ##   0:00:45  Checking assertions in step 85..
+SBY 10:54:24 [bmc_bmc] engine_0: ##   0:00:48  Checking assumptions in step 86..
+SBY 10:54:24 [bmc_bmc] engine_0: ##   0:00:48  Checking assertions in step 86..
+SBY 10:54:26 [bmc_bmc] engine_0: ##   0:00:50  Checking assumptions in step 87..
+SBY 10:54:26 [bmc_bmc] engine_0: ##   0:00:50  Checking assertions in step 87..
+SBY 10:54:28 [bmc_bmc] engine_0: ##   0:00:52  Checking assumptions in step 88..
+SBY 10:54:28 [bmc_bmc] engine_0: ##   0:00:52  Checking assertions in step 88..
+SBY 10:54:31 [bmc_bmc] engine_0: ##   0:00:55  Checking assumptions in step 89..
+SBY 10:54:31 [bmc_bmc] engine_0: ##   0:00:55  Checking assertions in step 89..
+SBY 10:54:34 [bmc_bmc] engine_0: ##   0:00:58  Checking assumptions in step 90..
+SBY 10:54:34 [bmc_bmc] engine_0: ##   0:00:58  Checking assertions in step 90..
+SBY 10:54:37 [bmc_bmc] engine_0: ##   0:01:01  Checking assumptions in step 91..
+SBY 10:54:37 [bmc_bmc] engine_0: ##   0:01:01  Checking assertions in step 91..
+SBY 10:54:40 [bmc_bmc] engine_0: ##   0:01:04  Checking assumptions in step 92..
+SBY 10:54:40 [bmc_bmc] engine_0: ##   0:01:04  Checking assertions in step 92..
+SBY 10:54:43 [bmc_bmc] engine_0: ##   0:01:07  Checking assumptions in step 93..
+SBY 10:54:43 [bmc_bmc] engine_0: ##   0:01:07  Checking assertions in step 93..
+SBY 10:54:46 [bmc_bmc] engine_0: ##   0:01:10  Checking assumptions in step 94..
+SBY 10:54:46 [bmc_bmc] engine_0: ##   0:01:10  Checking assertions in step 94..
+SBY 10:54:49 [bmc_bmc] engine_0: ##   0:01:13  Checking assumptions in step 95..
+SBY 10:54:49 [bmc_bmc] engine_0: ##   0:01:13  Checking assertions in step 95..
+SBY 10:54:51 [bmc_bmc] engine_0: ##   0:01:15  Checking assumptions in step 96..
+SBY 10:54:51 [bmc_bmc] engine_0: ##   0:01:15  Checking assertions in step 96..
+SBY 10:54:55 [bmc_bmc] engine_0: ##   0:01:19  Checking assumptions in step 97..
+SBY 10:54:55 [bmc_bmc] engine_0: ##   0:01:19  Checking assertions in step 97..
+SBY 10:54:59 [bmc_bmc] engine_0: ##   0:01:23  Checking assumptions in step 98..
+SBY 10:54:59 [bmc_bmc] engine_0: ##   0:01:23  Checking assertions in step 98..
+SBY 10:55:03 [bmc_bmc] engine_0: ##   0:01:27  Checking assumptions in step 99..
+SBY 10:55:03 [bmc_bmc] engine_0: ##   0:01:27  Checking assertions in step 99..
+SBY 10:55:06 [bmc_bmc] engine_0: ##   0:01:30  Checking assumptions in step 100..
+SBY 10:55:06 [bmc_bmc] engine_0: ##   0:01:30  Checking assertions in step 100..
+SBY 10:55:11 [bmc_bmc] engine_0: ##   0:01:35  Checking assumptions in step 101..
+SBY 10:55:11 [bmc_bmc] engine_0: ##   0:01:35  Checking assertions in step 101..
+SBY 10:55:16 [bmc_bmc] engine_0: ##   0:01:40  Checking assumptions in step 102..
+SBY 10:55:16 [bmc_bmc] engine_0: ##   0:01:40  Checking assertions in step 102..
+SBY 10:55:21 [bmc_bmc] engine_0: ##   0:01:45  Checking assumptions in step 103..
+SBY 10:55:21 [bmc_bmc] engine_0: ##   0:01:45  Checking assertions in step 103..
+SBY 10:55:24 [bmc_bmc] engine_0: ##   0:01:48  Checking assumptions in step 104..
+SBY 10:55:24 [bmc_bmc] engine_0: ##   0:01:48  Checking assertions in step 104..
+SBY 10:55:30 [bmc_bmc] engine_0: ##   0:01:53  Checking assumptions in step 105..
+SBY 10:55:30 [bmc_bmc] engine_0: ##   0:01:54  Checking assertions in step 105..
+SBY 10:55:34 [bmc_bmc] engine_0: ##   0:01:58  Checking assumptions in step 106..
+SBY 10:55:34 [bmc_bmc] engine_0: ##   0:01:58  Checking assertions in step 106..
+SBY 10:55:40 [bmc_bmc] engine_0: ##   0:02:04  Checking assumptions in step 107..
+SBY 10:55:40 [bmc_bmc] engine_0: ##   0:02:04  Checking assertions in step 107..
+SBY 10:55:45 [bmc_bmc] engine_0: ##   0:02:09  Checking assumptions in step 108..
+SBY 10:55:45 [bmc_bmc] engine_0: ##   0:02:09  Checking assertions in step 108..
+SBY 10:55:50 [bmc_bmc] engine_0: ##   0:02:14  Checking assumptions in step 109..
+SBY 10:55:50 [bmc_bmc] engine_0: ##   0:02:14  Checking assertions in step 109..
+SBY 10:55:55 [bmc_bmc] engine_0: ##   0:02:19  Checking assumptions in step 110..
+SBY 10:55:55 [bmc_bmc] engine_0: ##   0:02:19  Checking assertions in step 110..
+SBY 10:55:59 [bmc_bmc] engine_0: ##   0:02:23  Checking assumptions in step 111..
+SBY 10:55:59 [bmc_bmc] engine_0: ##   0:02:23  Checking assertions in step 111..
+SBY 10:56:04 [bmc_bmc] engine_0: ##   0:02:28  Checking assumptions in step 112..
+SBY 10:56:04 [bmc_bmc] engine_0: ##   0:02:28  Checking assertions in step 112..
+SBY 10:56:10 [bmc_bmc] engine_0: ##   0:02:34  Checking assumptions in step 113..
+SBY 10:56:10 [bmc_bmc] engine_0: ##   0:02:34  Checking assertions in step 113..
+SBY 10:56:16 [bmc_bmc] engine_0: ##   0:02:40  Checking assumptions in step 114..
+SBY 10:56:16 [bmc_bmc] engine_0: ##   0:02:40  Checking assertions in step 114..
+SBY 10:56:22 [bmc_bmc] engine_0: ##   0:02:46  Checking assumptions in step 115..
+SBY 10:56:22 [bmc_bmc] engine_0: ##   0:02:46  Checking assertions in step 115..
+SBY 10:56:25 [bmc_bmc] engine_0: ##   0:02:49  Checking assumptions in step 116..
+SBY 10:56:25 [bmc_bmc] engine_0: ##   0:02:49  Checking assertions in step 116..
+SBY 10:56:31 [bmc_bmc] engine_0: ##   0:02:55  Checking assumptions in step 117..
+SBY 10:56:31 [bmc_bmc] engine_0: ##   0:02:55  Checking assertions in step 117..
+SBY 10:56:38 [bmc_bmc] engine_0: ##   0:03:02  Checking assumptions in step 118..
+SBY 10:56:38 [bmc_bmc] engine_0: ##   0:03:02  Checking assertions in step 118..
+SBY 10:56:44 [bmc_bmc] engine_0: ##   0:03:08  Checking assumptions in step 119..
+SBY 10:56:44 [bmc_bmc] engine_0: ##   0:03:08  Checking assertions in step 119..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:03:14  Status: passed
+SBY 10:56:50 [bmc_bmc] engine_0: finished (returncode=0)
+SBY 10:56:50 [bmc_bmc] engine_0: Status returned by engine: pass
+SBY 10:56:50 [bmc_bmc] summary: Elapsed clock time [H:MM:SS (secs)]: 0:03:29 (209)
+SBY 10:56:50 [bmc_bmc] summary: Elapsed process time [H:MM:SS (secs)]: 0:03:14 (194)
+SBY 10:56:50 [bmc_bmc] summary: engine_0 (smtbmc) returned pass
+SBY 10:56:50 [bmc_bmc] summary: engine_0 did not produce any traces
+SBY 10:56:50 [bmc_bmc] DONE (PASS, rc=0)
+----- conv1d_unit rc=0
+===== FORMAL softmax_unit
+SBY 10:56:50 [bmc_bmc] Removing directory '/home/jese/tinyllm/src/softmax_unit/formal/bmc_bmc'.
+SBY 10:56:50 [bmc_bmc] Copy '/home/jese/tinyllm/src/softmax_unit/formal/../../../systemverilog_fp_unit/rtl/fp_pkg.sv' to '/home/jese/tinyllm/src/softmax_unit/formal/bmc_bmc/src/fp_pkg.sv'.
+SBY 10:56:50 [bmc_bmc] Copy '/home/jese/tinyllm/src/softmax_unit/formal/fp_unit_stub.sv' to '/home/jese/tinyllm/src/softmax_unit/formal/bmc_bmc/src/fp_unit_stub.sv'.
+SBY 10:56:50 [bmc_bmc] Copy '/home/jese/tinyllm/src/softmax_unit/formal/fp_exp_stub.sv' to '/home/jese/tinyllm/src/softmax_unit/formal/bmc_bmc/src/fp_exp_stub.sv'.
+SBY 10:56:50 [bmc_bmc] Copy '/home/jese/tinyllm/src/softmax_unit/formal/../softmax_unit.sv' to '/home/jese/tinyllm/src/softmax_unit/formal/bmc_bmc/src/softmax_unit.sv'.
+SBY 10:56:50 [bmc_bmc] Copy '/home/jese/tinyllm/src/softmax_unit/formal/softmax_props.sv' to '/home/jese/tinyllm/src/softmax_unit/formal/bmc_bmc/src/softmax_props.sv'.
+SBY 10:56:50 [bmc_bmc] engine_0: smtbmc
+SBY 10:56:50 [bmc_bmc] base: starting process "cd bmc_bmc/src; yosys -ql ../model/design.log ../model/design.ys"
+SBY 10:56:50 [bmc_bmc] base: Warning: Replacing memory \exp_buf with list of registers. See softmax_unit.sv:185
+SBY 10:56:50 [bmc_bmc] base: Warning: Replacing memory \input_buf with list of registers. See softmax_unit.sv:104
+SBY 10:56:50 [bmc_bmc] base: finished (returncode=0)
+SBY 10:56:50 [bmc_bmc] prep: starting process "cd bmc_bmc/model; yosys -ql design_prep.log design_prep.ys"
+SBY 10:56:50 [bmc_bmc] prep: finished (returncode=0)
+SBY 10:56:50 [bmc_bmc] smt2: starting process "cd bmc_bmc/model; yosys -ql design_smt2.log design_smt2.ys"
+SBY 10:56:51 [bmc_bmc] smt2: finished (returncode=0)
+SBY 10:56:51 [bmc_bmc] engine_0: starting process "cd bmc_bmc; yosys-smtbmc --presat --unroll --noprogress -t 120  --append 0 --dump-vcd engine_0/trace.vcd --dump-yw engine_0/trace.yw --dump-vlogtb engine_0/trace_tb.v --dump-smtc engine_0/trace.smtc model/design_smt2.smt2"
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Solver: yices
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 0..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 0..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 1..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 1..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 2..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 2..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 3..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 3..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 4..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 4..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 5..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 5..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 6..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 6..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 7..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 7..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 8..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 8..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 9..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 9..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 10..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 10..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 11..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 11..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 12..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 12..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 13..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 13..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 14..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 14..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 15..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 15..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 16..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 16..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 17..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 17..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 18..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 18..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 19..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 19..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 20..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 20..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 21..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 21..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 22..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 22..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 23..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 23..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 24..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 24..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 25..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 25..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 26..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 26..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 27..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 27..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 28..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 28..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 29..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 29..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 30..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 30..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 31..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 31..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 32..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 32..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 33..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 33..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 34..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 34..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 35..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 35..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 36..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 36..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 37..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 37..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 38..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 38..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 39..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 39..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 40..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 40..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 41..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 41..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 42..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 42..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 43..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 43..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 44..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 44..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 45..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 45..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 46..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 46..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 47..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 47..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 48..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 48..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 49..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 49..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 50..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 50..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 51..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 51..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 52..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 52..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 53..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 53..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 54..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 54..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 55..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 55..
+SBY 10:56:49 [bmc_bmc] engine_0: ##  -1:59:59  Checking assumptions in step 56..
+SBY 10:56:49 [bmc_bmc] engine_0: ##  -1:59:59  Checking assertions in step 56..
+SBY 10:56:49 [bmc_bmc] engine_0: ##  -1:59:59  Checking assumptions in step 57..
+SBY 10:56:49 [bmc_bmc] engine_0: ##  -1:59:59  Checking assertions in step 57..
+SBY 10:56:49 [bmc_bmc] engine_0: ##  -1:59:59  Checking assumptions in step 58..
+SBY 10:56:49 [bmc_bmc] engine_0: ##  -1:59:59  Checking assertions in step 58..
+SBY 10:56:49 [bmc_bmc] engine_0: ##  -1:59:59  Checking assumptions in step 59..
+SBY 10:56:49 [bmc_bmc] engine_0: ##  -1:59:59  Checking assertions in step 59..
+SBY 10:56:49 [bmc_bmc] engine_0: ##  -1:59:59  Checking assumptions in step 60..
+SBY 10:56:49 [bmc_bmc] engine_0: ##  -1:59:59  Checking assertions in step 60..
+SBY 10:56:49 [bmc_bmc] engine_0: ##  -1:59:59  Checking assumptions in step 61..
+SBY 10:56:49 [bmc_bmc] engine_0: ##  -1:59:59  Checking assertions in step 61..
+SBY 10:56:49 [bmc_bmc] engine_0: ##  -1:59:59  Checking assumptions in step 62..
+SBY 10:56:49 [bmc_bmc] engine_0: ##  -1:59:59  Checking assertions in step 62..
+SBY 10:56:49 [bmc_bmc] engine_0: ##  -1:59:59  Checking assumptions in step 63..
+SBY 10:56:49 [bmc_bmc] engine_0: ##  -1:59:59  Checking assertions in step 63..
+SBY 10:56:49 [bmc_bmc] engine_0: ##  -1:59:59  Checking assumptions in step 64..
+SBY 10:56:49 [bmc_bmc] engine_0: ##  -1:59:59  Checking assertions in step 64..
+SBY 10:56:49 [bmc_bmc] engine_0: ##  -1:59:59  Checking assumptions in step 65..
+SBY 10:56:49 [bmc_bmc] engine_0: ##  -1:59:59  Checking assertions in step 65..
+SBY 10:56:50 [bmc_bmc] engine_0: ##  -1:59:59  Checking assumptions in step 66..
+SBY 10:56:50 [bmc_bmc] engine_0: ##  -1:59:59  Checking assertions in step 66..
+SBY 10:56:50 [bmc_bmc] engine_0: ##  -1:59:59  Checking assumptions in step 67..
+SBY 10:56:50 [bmc_bmc] engine_0: ##  -1:59:59  Checking assertions in step 67..
+SBY 10:56:50 [bmc_bmc] engine_0: ##  -1:59:59  Checking assumptions in step 68..
+SBY 10:56:50 [bmc_bmc] engine_0: ##  -1:59:59  Checking assertions in step 68..
+SBY 10:56:50 [bmc_bmc] engine_0: ##  -1:59:59  Checking assumptions in step 69..
+SBY 10:56:50 [bmc_bmc] engine_0: ##  -1:59:59  Checking assertions in step 69..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 70..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 70..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 71..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 71..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 72..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 72..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 73..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 73..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 74..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 74..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 75..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 75..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 76..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 76..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 77..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 77..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 78..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 78..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 79..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 79..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 80..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 80..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 81..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 81..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 82..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 82..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 83..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 83..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 84..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 84..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 85..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 85..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 86..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 86..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 87..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 87..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 88..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 88..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 89..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 89..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 90..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 90..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 91..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 91..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 92..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 92..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 93..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 93..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 94..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 94..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 95..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 95..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 96..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 96..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 97..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 97..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 98..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 98..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 99..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 99..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 100..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 100..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 101..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 101..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 102..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 102..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 103..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 103..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 104..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 104..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 105..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 105..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 106..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 106..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 107..
+SBY 10:56:50 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 107..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 108..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 108..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 109..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 109..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 110..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 110..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 111..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 111..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 112..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 112..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 113..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 113..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 114..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 114..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 115..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 115..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 116..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 116..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 117..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 117..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 118..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 118..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 119..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 119..
+SBY 10:56:51 [bmc_bmc] engine_0: ##   0:00:00  Status: passed
+SBY 10:56:51 [bmc_bmc] engine_0: finished (returncode=0)
+SBY 10:56:51 [bmc_bmc] engine_0: Status returned by engine: pass
+SBY 10:56:51 [bmc_bmc] summary: Elapsed clock time [H:MM:SS (secs)]: 0:00:03 (3)
+SBY 10:56:51 [bmc_bmc] summary: Elapsed process time [H:MM:SS (secs)]: 0:00:03 (3)
+SBY 10:56:51 [bmc_bmc] summary: engine_0 (smtbmc) returned pass
+SBY 10:56:51 [bmc_bmc] summary: engine_0 did not produce any traces
+SBY 10:56:51 [bmc_bmc] DONE (PASS, rc=0)
+----- softmax_unit rc=0
+===== FORMAL output_projection_unit
+SBY 10:56:51 [bmc] Removing directory '/home/jese/tinyllm/src/output_projection_unit/formal/bmc'.
+SBY 10:56:51 [bmc] Copy '/home/jese/tinyllm/src/output_projection_unit/formal/../../../systemverilog_fp_unit/rtl/fp_pkg.sv' to '/home/jese/tinyllm/src/output_projection_unit/formal/bmc/src/fp_pkg.sv'.
+SBY 10:56:51 [bmc] Copy '/home/jese/tinyllm/src/output_projection_unit/formal/../output_projection_unit.sv' to '/home/jese/tinyllm/src/output_projection_unit/formal/bmc/src/output_projection_unit.sv'.
+SBY 10:56:51 [bmc] Copy '/home/jese/tinyllm/src/output_projection_unit/formal/matrix_unit_stub.sv' to '/home/jese/tinyllm/src/output_projection_unit/formal/bmc/src/matrix_unit_stub.sv'.
+SBY 10:56:51 [bmc] Copy '/home/jese/tinyllm/src/output_projection_unit/formal/../../../systemverilog_fp_unit/rtl/fp32_to_bf16_round.sv' to '/home/jese/tinyllm/src/output_projection_unit/formal/bmc/src/fp32_to_bf16_round.sv'.
+SBY 10:56:51 [bmc] Copy '/home/jese/tinyllm/src/output_projection_unit/formal/fp_unit_stub.sv' to '/home/jese/tinyllm/src/output_projection_unit/formal/bmc/src/fp_unit_stub.sv'.
+SBY 10:56:51 [bmc] Copy '/home/jese/tinyllm/src/output_projection_unit/formal/output_projection_props.sv' to '/home/jese/tinyllm/src/output_projection_unit/formal/bmc/src/output_projection_props.sv'.
+SBY 10:56:51 [bmc] engine_0: smtbmc boolector
+SBY 10:56:51 [bmc] base: starting process "cd bmc/src; yosys -ql ../model/design.log ../model/design.ys"
+SBY 10:56:51 [bmc] base: ERROR: Module `matrix_unit' referenced in module `output_projection_unit' in cell `u_proj' does not have a parameter named 'LANES'.
+SBY 10:56:51 [bmc] base: finished (returncode=1)
+SBY 10:56:51 [bmc] base: task failed. ERROR.
+SBY 10:56:51 [bmc] summary: Elapsed clock time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 10:56:51 [bmc] summary: Elapsed process time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 10:56:51 [bmc] summary: engine_0 (smtbmc boolector) did not return a status
+SBY 10:56:51 [bmc] summary: engine_0 did not produce any traces
+SBY 10:56:51 [bmc] DONE (ERROR, rc=16)
+----- output_projection_unit rc=16
+===== FORMAL SSM_unit
+SBY 10:56:51 [bmc_bmc] Removing directory '/home/jese/tinyllm/src/SSM_unit/formal/bmc_bmc'.
+SBY 10:56:51 [bmc_bmc] Copy '/home/jese/tinyllm/src/SSM_unit/formal/../../../systemverilog_fp_unit/rtl/fp_pkg.sv' to '/home/jese/tinyllm/src/SSM_unit/formal/bmc_bmc/src/fp_pkg.sv'.
+SBY 10:56:51 [bmc_bmc] Copy '/home/jese/tinyllm/src/SSM_unit/formal/fp_unit_stub.sv' to '/home/jese/tinyllm/src/SSM_unit/formal/bmc_bmc/src/fp_unit_stub.sv'.
+SBY 10:56:51 [bmc_bmc] Copy '/home/jese/tinyllm/src/SSM_unit/formal/seq_stubs.sv' to '/home/jese/tinyllm/src/SSM_unit/formal/bmc_bmc/src/seq_stubs.sv'.
+SBY 10:56:51 [bmc_bmc] Copy '/home/jese/tinyllm/src/SSM_unit/formal/../../../systemverilog_fp_unit/rtl/fp32_to_bf16_round.sv' to '/home/jese/tinyllm/src/SSM_unit/formal/bmc_bmc/src/fp32_to_bf16_round.sv'.
+SBY 10:56:51 [bmc_bmc] Copy '/home/jese/tinyllm/src/SSM_unit/formal/../ssm_unit.sv' to '/home/jese/tinyllm/src/SSM_unit/formal/bmc_bmc/src/ssm_unit.sv'.
+SBY 10:56:51 [bmc_bmc] Copy '/home/jese/tinyllm/src/SSM_unit/formal/ssm_props.sv' to '/home/jese/tinyllm/src/SSM_unit/formal/bmc_bmc/src/ssm_props.sv'.
+SBY 10:56:51 [bmc_bmc] engine_0: smtbmc boolector
+SBY 10:56:51 [bmc_bmc] base: starting process "cd bmc_bmc/src; yosys -ql ../model/design.log ../model/design.ys"
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \out_buf with list of registers. See ssm_unit.sv:456
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \acc_q with list of registers. See ssm_unit.sv:455
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \x_lane with list of registers. See ssm_unit.sv:407, ssm_unit.sv:371
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \hidx_w with list of registers. See ssm_unit.sv:573, ssm_unit.sv:368
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \hidx_r with list of registers. See ssm_unit.sv:405, ssm_unit.sv:365
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \d_rd with list of registers. See ssm_unit.sv:366, ssm_unit.sv:364
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \lane_ok with list of registers. See ssm_unit.sv:364, ssm_unit.sv:363
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \d_lane with list of registers. See ssm_unit.sv:363, ssm_unit.sv:362
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \a2_b with list of registers. See ssm_unit.sv:356
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \a2_a with list of registers. See ssm_unit.sv:356
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \a1_b with list of registers. See ssm_unit.sv:355
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \a1_a with list of registers. See ssm_unit.sv:355
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \m3_b with list of registers. See ssm_unit.sv:354
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \m3_a with list of registers. See ssm_unit.sv:354
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \m2_b with list of registers. See ssm_unit.sv:353
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \m2_a with list of registers. See ssm_unit.sv:353
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \m1_b with list of registers. See ssm_unit.sv:352
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \m1_a with list of registers. See ssm_unit.sv:352
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \a2_ov with list of registers. See ssm_unit.sv:248
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \a2_y with list of registers. See ssm_unit.sv:246
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \a1_ov with list of registers. See ssm_unit.sv:241
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \a1_y with list of registers. See ssm_unit.sv:239
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \m3_ov with list of registers. See ssm_unit.sv:234
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \m3_y with list of registers. See ssm_unit.sv:232
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \m2_ov with list of registers. See ssm_unit.sv:227
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \m2_y with list of registers. See ssm_unit.sv:225
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \m1_ov with list of registers. See ssm_unit.sv:220
+SBY 10:56:51 [bmc_bmc] base: Warning: Replacing memory \m1_y with list of registers. See ssm_unit.sv:218
+SBY 10:56:52 [bmc_bmc] base: finished (returncode=0)
+SBY 10:56:52 [bmc_bmc] prep: starting process "cd bmc_bmc/model; yosys -ql design_prep.log design_prep.ys"
+SBY 10:56:52 [bmc_bmc] prep: finished (returncode=0)
+SBY 10:56:52 [bmc_bmc] smt2: starting process "cd bmc_bmc/model; yosys -ql design_smt2.log design_smt2.ys"
+SBY 10:56:52 [bmc_bmc] smt2: finished (returncode=0)
+SBY 10:56:52 [bmc_bmc] engine_0: starting process "cd bmc_bmc; yosys-smtbmc -s boolector --presat --unroll --noprogress -t 140  --append 0 --dump-vcd engine_0/trace.vcd --dump-yw engine_0/trace.yw --dump-vlogtb engine_0/trace_tb.v --dump-smtc engine_0/trace.smtc model/design_smt2.smt2"
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Solver: boolector
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 0..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 0..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 1..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 1..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 2..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 2..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 3..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 3..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 4..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 4..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 5..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 5..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 6..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 6..
+SBY 10:56:52 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 7..
+SBY 10:56:53 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 7..
+SBY 10:56:53 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 8..
+SBY 10:56:53 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 8..
+SBY 10:56:53 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 9..
+SBY 10:56:53 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 9..
+SBY 10:56:53 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 10..
+SBY 10:56:53 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 10..
+SBY 10:56:53 [bmc_bmc] engine_0: ##   0:00:00  Checking assumptions in step 11..
+SBY 10:56:53 [bmc_bmc] engine_0: ##   0:00:00  Checking assertions in step 11..
+SBY 10:56:53 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 12..
+SBY 10:56:53 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 12..
+SBY 10:56:53 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 13..
+SBY 10:56:53 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 13..
+SBY 10:56:53 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 14..
+SBY 10:56:53 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 14..
+SBY 10:56:53 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 15..
+SBY 10:56:53 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 15..
+SBY 10:56:53 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 16..
+SBY 10:56:53 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 16..
+SBY 10:56:53 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 17..
+SBY 10:56:54 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 17..
+SBY 10:56:54 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 18..
+SBY 10:56:54 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 18..
+SBY 10:56:54 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 19..
+SBY 10:56:54 [bmc_bmc] engine_0: ##   0:00:01  Checking assertions in step 19..
+SBY 10:56:54 [bmc_bmc] engine_0: ##   0:00:01  Checking assumptions in step 20..
+SBY 10:56:54 [bmc_bmc] engine_0: ##   0:00:02  Checking assertions in step 20..
+SBY 10:56:54 [bmc_bmc] engine_0: ##   0:00:02  Checking assumptions in step 21..
+SBY 10:56:54 [bmc_bmc] engine_0: ##   0:00:02  Checking assertions in step 21..
+SBY 10:56:54 [bmc_bmc] engine_0: ##   0:00:02  Checking assumptions in step 22..
+SBY 10:56:54 [bmc_bmc] engine_0: ##   0:00:02  Checking assertions in step 22..
+SBY 10:56:54 [bmc_bmc] engine_0: ##   0:00:02  Checking assumptions in step 23..
+SBY 10:56:54 [bmc_bmc] engine_0: ##   0:00:02  Checking assertions in step 23..
+SBY 10:56:54 [bmc_bmc] engine_0: ##   0:00:02  Checking assumptions in step 24..
+SBY 10:56:54 [bmc_bmc] engine_0: ##   0:00:02  Checking assertions in step 24..
+SBY 10:56:55 [bmc_bmc] engine_0: ##   0:00:02  Checking assumptions in step 25..
+SBY 10:56:55 [bmc_bmc] engine_0: ##   0:00:02  Checking assertions in step 25..
+SBY 10:56:55 [bmc_bmc] engine_0: ##   0:00:02  Checking assumptions in step 26..
+SBY 10:56:55 [bmc_bmc] engine_0: ##   0:00:02  Checking assertions in step 26..
+SBY 10:56:55 [bmc_bmc] engine_0: ##   0:00:03  Checking assumptions in step 27..
+SBY 10:56:55 [bmc_bmc] engine_0: ##   0:00:03  Checking assertions in step 27..
+SBY 10:56:55 [bmc_bmc] engine_0: ##   0:00:03  Checking assumptions in step 28..
+SBY 10:56:55 [bmc_bmc] engine_0: ##   0:00:03  Checking assertions in step 28..
+SBY 10:56:55 [bmc_bmc] engine_0: ##   0:00:03  Checking assumptions in step 29..
+SBY 10:56:55 [bmc_bmc] engine_0: ##   0:00:03  Checking assertions in step 29..
+SBY 10:56:55 [bmc_bmc] engine_0: ##   0:00:03  Checking assumptions in step 30..
+SBY 10:56:56 [bmc_bmc] engine_0: ##   0:00:03  Checking assertions in step 30..
+SBY 10:56:56 [bmc_bmc] engine_0: ##   0:00:03  Checking assumptions in step 31..
+SBY 10:56:56 [bmc_bmc] engine_0: ##   0:00:03  Checking assertions in step 31..
+SBY 10:56:56 [bmc_bmc] engine_0: ##   0:00:03  Checking assumptions in step 32..
+SBY 10:56:56 [bmc_bmc] engine_0: ##   0:00:04  Checking assertions in step 32..
+SBY 10:56:56 [bmc_bmc] engine_0: ##   0:00:04  Checking assumptions in step 33..
+SBY 10:56:56 [bmc_bmc] engine_0: ##   0:00:04  Checking assertions in step 33..
+SBY 10:56:56 [bmc_bmc] engine_0: ##   0:00:04  Checking assumptions in step 34..
+SBY 10:56:56 [bmc_bmc] engine_0: ##   0:00:04  Checking assertions in step 34..
+SBY 10:56:57 [bmc_bmc] engine_0: ##   0:00:04  Checking assumptions in step 35..
+SBY 10:56:57 [bmc_bmc] engine_0: ##   0:00:04  Checking assertions in step 35..
+SBY 10:56:57 [bmc_bmc] engine_0: ##   0:00:04  Checking assumptions in step 36..
+SBY 10:56:57 [bmc_bmc] engine_0: ##   0:00:04  Checking assertions in step 36..
+SBY 10:56:57 [bmc_bmc] engine_0: ##   0:00:05  Checking assumptions in step 37..
+SBY 10:56:57 [bmc_bmc] engine_0: ##   0:00:05  Checking assertions in step 37..
+SBY 10:56:57 [bmc_bmc] engine_0: ##   0:00:05  Checking assumptions in step 38..
+SBY 10:56:57 [bmc_bmc] engine_0: ##   0:00:05  Checking assertions in step 38..
+SBY 10:56:57 [bmc_bmc] engine_0: ##   0:00:05  Checking assumptions in step 39..
+SBY 10:56:58 [bmc_bmc] engine_0: ##   0:00:05  Checking assertions in step 39..
+SBY 10:56:58 [bmc_bmc] engine_0: ##   0:00:05  Checking assumptions in step 40..
+SBY 10:56:58 [bmc_bmc] engine_0: ##   0:00:05  Checking assertions in step 40..
+SBY 10:56:58 [bmc_bmc] engine_0: ##   0:00:06  Checking assumptions in step 41..
+SBY 10:56:58 [bmc_bmc] engine_0: ##   0:00:06  Checking assertions in step 41..
+SBY 10:56:58 [bmc_bmc] engine_0: ##   0:00:06  Checking assumptions in step 42..
+SBY 10:56:58 [bmc_bmc] engine_0: ##   0:00:06  Checking assertions in step 42..
+SBY 10:56:58 [bmc_bmc] engine_0: ##   0:00:06  Checking assumptions in step 43..
+SBY 10:56:59 [bmc_bmc] engine_0: ##   0:00:06  Checking assertions in step 43..
+SBY 10:56:59 [bmc_bmc] engine_0: ##   0:00:06  Checking assumptions in step 44..
+SBY 10:56:59 [bmc_bmc] engine_0: ##   0:00:06  Checking assertions in step 44..
+SBY 10:56:59 [bmc_bmc] engine_0: ##   0:00:07  Checking assumptions in step 45..
+SBY 10:56:59 [bmc_bmc] engine_0: ##   0:00:07  Checking assertions in step 45..
+SBY 10:56:59 [bmc_bmc] engine_0: ##   0:00:07  Checking assumptions in step 46..
+SBY 10:56:59 [bmc_bmc] engine_0: ##   0:00:07  Checking assertions in step 46..
+SBY 10:57:00 [bmc_bmc] engine_0: ##   0:00:07  Checking assumptions in step 47..
+SBY 10:57:00 [bmc_bmc] engine_0: ##   0:00:07  Checking assertions in step 47..
+SBY 10:57:00 [bmc_bmc] engine_0: ##   0:00:08  Checking assumptions in step 48..
+SBY 10:57:00 [bmc_bmc] engine_0: ##   0:00:08  Checking assertions in step 48..
+SBY 10:57:00 [bmc_bmc] engine_0: ##   0:00:08  Checking assumptions in step 49..
+SBY 10:57:00 [bmc_bmc] engine_0: ##   0:00:08  Checking assertions in step 49..
+SBY 10:57:01 [bmc_bmc] engine_0: ##   0:00:08  Checking assumptions in step 50..
+SBY 10:57:01 [bmc_bmc] engine_0: ##   0:00:09  Checking assertions in step 50..
+SBY 10:57:01 [bmc_bmc] engine_0: ##   0:00:09  Checking assumptions in step 51..
+SBY 10:57:01 [bmc_bmc] engine_0: ##   0:00:09  Checking assertions in step 51..
+SBY 10:57:01 [bmc_bmc] engine_0: ##   0:00:09  Checking assumptions in step 52..
+SBY 10:57:02 [bmc_bmc] engine_0: ##   0:00:09  Checking assertions in step 52..
+SBY 10:57:02 [bmc_bmc] engine_0: ##   0:00:09  Checking assumptions in step 53..
+SBY 10:57:02 [bmc_bmc] engine_0: ##   0:00:10  Checking assertions in step 53..
+SBY 10:57:02 [bmc_bmc] engine_0: ##   0:00:10  Checking assumptions in step 54..
+SBY 10:57:02 [bmc_bmc] engine_0: ##   0:00:10  Checking assertions in step 54..
+SBY 10:57:03 [bmc_bmc] engine_0: ##   0:00:10  Checking assumptions in step 55..
+SBY 10:57:03 [bmc_bmc] engine_0: ##   0:00:10  Checking assertions in step 55..
+SBY 10:57:03 [bmc_bmc] engine_0: ##   0:00:11  Checking assumptions in step 56..
+SBY 10:57:03 [bmc_bmc] engine_0: ##   0:00:11  Checking assertions in step 56..
+SBY 10:57:03 [bmc_bmc] engine_0: ##   0:00:11  Checking assumptions in step 57..
+SBY 10:57:03 [bmc_bmc] engine_0: ##   0:00:11  Checking assertions in step 57..
+SBY 10:57:04 [bmc_bmc] engine_0: ##   0:00:11  Checking assumptions in step 58..
+SBY 10:57:04 [bmc_bmc] engine_0: ##   0:00:12  Checking assertions in step 58..
+SBY 10:57:04 [bmc_bmc] engine_0: ##   0:00:12  Checking assumptions in step 59..
+SBY 10:57:04 [bmc_bmc] engine_0: ##   0:00:12  Checking assertions in step 59..
+SBY 10:57:05 [bmc_bmc] engine_0: ##   0:00:12  Checking assumptions in step 60..
+SBY 10:57:05 [bmc_bmc] engine_0: ##   0:00:12  Checking assertions in step 60..
+SBY 10:57:05 [bmc_bmc] engine_0: ##   0:00:13  Checking assumptions in step 61..
+SBY 10:57:05 [bmc_bmc] engine_0: ##   0:00:13  Checking assertions in step 61..
+SBY 10:57:05 [bmc_bmc] engine_0: ##   0:00:13  Checking assumptions in step 62..
+SBY 10:57:06 [bmc_bmc] engine_0: ##   0:00:13  Checking assertions in step 62..
+SBY 10:57:06 [bmc_bmc] engine_0: ##   0:00:13  Checking assumptions in step 63..
+SBY 10:57:06 [bmc_bmc] engine_0: ##   0:00:14  Checking assertions in step 63..
+SBY 10:57:06 [bmc_bmc] engine_0: ##   0:00:14  Checking assumptions in step 64..
+SBY 10:57:07 [bmc_bmc] engine_0: ##   0:00:14  Checking assertions in step 64..
+SBY 10:57:07 [bmc_bmc] engine_0: ##   0:00:14  Checking assumptions in step 65..
+SBY 10:57:07 [bmc_bmc] engine_0: ##   0:00:15  Checking assertions in step 65..
+SBY 10:57:07 [bmc_bmc] engine_0: ##   0:00:15  Checking assumptions in step 66..
+SBY 10:57:08 [bmc_bmc] engine_0: ##   0:00:15  Checking assertions in step 66..
+SBY 10:57:08 [bmc_bmc] engine_0: ##   0:00:16  Checking assumptions in step 67..
+SBY 10:57:08 [bmc_bmc] engine_0: ##   0:00:16  Checking assertions in step 67..
+SBY 10:57:09 [bmc_bmc] engine_0: ##   0:00:16  Checking assumptions in step 68..
+SBY 10:57:09 [bmc_bmc] engine_0: ##   0:00:17  Checking assertions in step 68..
+SBY 10:57:09 [bmc_bmc] engine_0: ##   0:00:17  Checking assumptions in step 69..
+SBY 10:57:09 [bmc_bmc] engine_0: ##   0:00:17  Checking assertions in step 69..
+SBY 10:57:09 [bmc_bmc] engine_0: ##   0:00:17  Checking assumptions in step 70..
+SBY 10:57:10 [bmc_bmc] engine_0: ##   0:00:17  Checking assertions in step 70..
+SBY 10:57:10 [bmc_bmc] engine_0: ##   0:00:18  Checking assumptions in step 71..
+SBY 10:57:10 [bmc_bmc] engine_0: ##   0:00:18  Checking assertions in step 71..
+SBY 10:57:11 [bmc_bmc] engine_0: ##   0:00:18  Checking assumptions in step 72..
+SBY 10:57:11 [bmc_bmc] engine_0: ##   0:00:19  Checking assertions in step 72..
+SBY 10:57:11 [bmc_bmc] engine_0: ##   0:00:19  Checking assumptions in step 73..
+SBY 10:57:12 [bmc_bmc] engine_0: ##   0:00:19  Checking assertions in step 73..
+SBY 10:57:12 [bmc_bmc] engine_0: ##   0:00:19  Checking assumptions in step 74..
+SBY 10:57:12 [bmc_bmc] engine_0: ##   0:00:20  Checking assertions in step 74..
+SBY 10:57:12 [bmc_bmc] engine_0: ##   0:00:20  Checking assumptions in step 75..
+SBY 10:57:13 [bmc_bmc] engine_0: ##   0:00:20  Checking assertions in step 75..
+SBY 10:57:13 [bmc_bmc] engine_0: ##   0:00:21  Checking assumptions in step 76..
+SBY 10:57:13 [bmc_bmc] engine_0: ##   0:00:21  Checking assertions in step 76..
+SBY 10:57:14 [bmc_bmc] engine_0: ##   0:00:21  Checking assumptions in step 77..
+SBY 10:57:14 [bmc_bmc] engine_0: ##   0:00:22  Checking assertions in step 77..
+SBY 10:57:14 [bmc_bmc] engine_0: ##   0:00:22  Checking assumptions in step 78..
+SBY 10:57:15 [bmc_bmc] engine_0: ##   0:00:22  Checking assertions in step 78..
+SBY 10:57:15 [bmc_bmc] engine_0: ##   0:00:22  Checking assumptions in step 79..
+SBY 10:57:15 [bmc_bmc] engine_0: ##   0:00:23  Checking assertions in step 79..
+SBY 10:57:15 [bmc_bmc] engine_0: ##   0:00:23  Checking assumptions in step 80..
+SBY 10:57:16 [bmc_bmc] engine_0: ##   0:00:23  Checking assertions in step 80..
+SBY 10:57:16 [bmc_bmc] engine_0: ##   0:00:24  Checking assumptions in step 81..
+SBY 10:57:16 [bmc_bmc] engine_0: ##   0:00:24  Checking assertions in step 81..
+SBY 10:57:17 [bmc_bmc] engine_0: ##   0:00:24  Checking assumptions in step 82..
+SBY 10:57:17 [bmc_bmc] engine_0: ##   0:00:25  Checking assertions in step 82..
+SBY 10:57:18 [bmc_bmc] engine_0: ##   0:00:25  Checking assumptions in step 83..
+SBY 10:57:18 [bmc_bmc] engine_0: ##   0:00:26  Checking assertions in step 83..
+SBY 10:57:18 [bmc_bmc] engine_0: ##   0:00:26  Checking assumptions in step 84..
+SBY 10:57:19 [bmc_bmc] engine_0: ##   0:00:26  Checking assertions in step 84..
+SBY 10:57:19 [bmc_bmc] engine_0: ##   0:00:27  Checking assumptions in step 85..
+SBY 10:57:20 [bmc_bmc] engine_0: ##   0:00:27  Checking assertions in step 85..
+SBY 10:57:20 [bmc_bmc] engine_0: ##   0:00:28  Checking assumptions in step 86..
+SBY 10:57:21 [bmc_bmc] engine_0: ##   0:00:28  Checking assertions in step 86..
+SBY 10:57:21 [bmc_bmc] engine_0: ##   0:00:28  Checking assumptions in step 87..
+SBY 10:57:21 [bmc_bmc] engine_0: ##   0:00:29  Checking assertions in step 87..
+SBY 10:57:21 [bmc_bmc] engine_0: ##   0:00:29  Checking assumptions in step 88..
+SBY 10:57:19 [bmc_bmc] engine_0: ##   0:00:27  Checking assertions in step 88..
+SBY 10:57:20 [bmc_bmc] engine_0: ##   0:00:27  Checking assumptions in step 89..
+SBY 10:57:20 [bmc_bmc] engine_0: ##   0:00:28  Checking assertions in step 89..
+SBY 10:57:20 [bmc_bmc] engine_0: ##   0:00:28  Checking assumptions in step 90..
+SBY 10:57:21 [bmc_bmc] engine_0: ##   0:00:28  Checking assertions in step 90..
+SBY 10:57:21 [bmc_bmc] engine_0: ##   0:00:29  Checking assumptions in step 91..
+SBY 10:57:22 [bmc_bmc] engine_0: ##   0:00:29  Checking assertions in step 91..
+SBY 10:57:22 [bmc_bmc] engine_0: ##   0:00:29  Checking assumptions in step 92..
+SBY 10:57:22 [bmc_bmc] engine_0: ##   0:00:30  Checking assertions in step 92..
+SBY 10:57:22 [bmc_bmc] engine_0: ##   0:00:30  Checking assumptions in step 93..
+SBY 10:57:23 [bmc_bmc] engine_0: ##   0:00:31  Checking assertions in step 93..
+SBY 10:57:23 [bmc_bmc] engine_0: ##   0:00:31  Checking assumptions in step 94..
+SBY 10:57:24 [bmc_bmc] engine_0: ##   0:00:31  Checking assertions in step 94..
+SBY 10:57:24 [bmc_bmc] engine_0: ##   0:00:32  Checking assumptions in step 95..
+SBY 10:57:24 [bmc_bmc] engine_0: ##   0:00:32  Checking assertions in step 95..
+SBY 10:57:25 [bmc_bmc] engine_0: ##   0:00:32  Checking assumptions in step 96..
+SBY 10:57:25 [bmc_bmc] engine_0: ##   0:00:33  Checking assertions in step 96..
+SBY 10:57:25 [bmc_bmc] engine_0: ##   0:00:33  Checking assumptions in step 97..
+SBY 10:57:26 [bmc_bmc] engine_0: ##   0:00:34  Checking assertions in step 97..
+SBY 10:57:26 [bmc_bmc] engine_0: ##   0:00:34  Checking assumptions in step 98..
+SBY 10:57:27 [bmc_bmc] engine_0: ##   0:00:34  Checking assertions in step 98..
+SBY 10:57:27 [bmc_bmc] engine_0: ##   0:00:35  Checking assumptions in step 99..
+SBY 10:57:28 [bmc_bmc] engine_0: ##   0:00:35  Checking assertions in step 99..
+SBY 10:57:28 [bmc_bmc] engine_0: ##   0:00:35  Checking assumptions in step 100..
+SBY 10:57:28 [bmc_bmc] engine_0: ##   0:00:36  Checking assertions in step 100..
+SBY 10:57:29 [bmc_bmc] engine_0: ##   0:00:36  Checking assumptions in step 101..
+SBY 10:57:29 [bmc_bmc] engine_0: ##   0:00:37  Checking assertions in step 101..
+SBY 10:57:30 [bmc_bmc] engine_0: ##   0:00:37  Checking assumptions in step 102..
+SBY 10:57:30 [bmc_bmc] engine_0: ##   0:00:38  Checking assertions in step 102..
+SBY 10:57:30 [bmc_bmc] engine_0: ##   0:00:38  Checking assumptions in step 103..
+SBY 10:57:31 [bmc_bmc] engine_0: ##   0:00:38  Checking assertions in step 103..
+SBY 10:57:31 [bmc_bmc] engine_0: ##   0:00:39  Checking assumptions in step 104..
+SBY 10:57:32 [bmc_bmc] engine_0: ##   0:00:40  Checking assertions in step 104..
+SBY 10:57:32 [bmc_bmc] engine_0: ##   0:00:40  Checking assumptions in step 105..
+SBY 10:57:33 [bmc_bmc] engine_0: ##   0:00:41  Checking assertions in step 105..
+SBY 10:57:33 [bmc_bmc] engine_0: ##   0:00:41  Checking assumptions in step 106..
+SBY 10:57:34 [bmc_bmc] engine_0: ##   0:00:41  Checking assertions in step 106..
+SBY 10:57:34 [bmc_bmc] engine_0: ##   0:00:42  Checking assumptions in step 107..
+SBY 10:57:35 [bmc_bmc] engine_0: ##   0:00:42  Checking assertions in step 107..
+SBY 10:57:35 [bmc_bmc] engine_0: ##   0:00:43  Checking assumptions in step 108..
+SBY 10:57:36 [bmc_bmc] engine_0: ##   0:00:43  Checking assertions in step 108..
+SBY 10:57:36 [bmc_bmc] engine_0: ##   0:00:44  Checking assumptions in step 109..
+SBY 10:57:37 [bmc_bmc] engine_0: ##   0:00:45  Checking assertions in step 109..
+SBY 10:57:37 [bmc_bmc] engine_0: ##   0:00:45  Checking assumptions in step 110..
+SBY 10:57:38 [bmc_bmc] engine_0: ##   0:00:46  Checking assertions in step 110..
+SBY 10:57:38 [bmc_bmc] engine_0: ##   0:00:46  Checking assumptions in step 111..
+SBY 10:57:39 [bmc_bmc] engine_0: ##   0:00:47  Checking assertions in step 111..
+SBY 10:57:39 [bmc_bmc] engine_0: ##   0:00:47  Checking assumptions in step 112..
+SBY 10:57:40 [bmc_bmc] engine_0: ##   0:00:48  Checking assertions in step 112..
+SBY 10:57:40 [bmc_bmc] engine_0: ##   0:00:48  Checking assumptions in step 113..
+SBY 10:57:41 [bmc_bmc] engine_0: ##   0:00:49  Checking assertions in step 113..
+SBY 10:57:41 [bmc_bmc] engine_0: ##   0:00:49  Checking assumptions in step 114..
+SBY 10:57:42 [bmc_bmc] engine_0: ##   0:00:49  Checking assertions in step 114..
+SBY 10:57:42 [bmc_bmc] engine_0: ##   0:00:50  Checking assumptions in step 115..
+SBY 10:57:43 [bmc_bmc] engine_0: ##   0:00:50  Checking assertions in step 115..
+SBY 10:57:43 [bmc_bmc] engine_0: ##   0:00:51  Checking assumptions in step 116..
+SBY 10:57:44 [bmc_bmc] engine_0: ##   0:00:52  Checking assertions in step 116..
+SBY 10:57:44 [bmc_bmc] engine_0: ##   0:00:52  Checking assumptions in step 117..
+SBY 10:57:45 [bmc_bmc] engine_0: ##   0:00:53  Checking assertions in step 117..
+SBY 10:57:45 [bmc_bmc] engine_0: ##   0:00:53  Checking assumptions in step 118..
+SBY 10:57:46 [bmc_bmc] engine_0: ##   0:00:54  Checking assertions in step 118..
+SBY 10:57:46 [bmc_bmc] engine_0: ##   0:00:54  Checking assumptions in step 119..
+SBY 10:57:47 [bmc_bmc] engine_0: ##   0:00:55  Checking assertions in step 119..
+SBY 10:57:47 [bmc_bmc] engine_0: ##   0:00:55  Checking assumptions in step 120..
+SBY 10:57:48 [bmc_bmc] engine_0: ##   0:00:56  Checking assertions in step 120..
+SBY 10:57:49 [bmc_bmc] engine_0: ##   0:00:56  Checking assumptions in step 121..
+SBY 10:57:49 [bmc_bmc] engine_0: ##   0:00:57  Checking assertions in step 121..
+SBY 10:57:50 [bmc_bmc] engine_0: ##   0:00:57  Checking assumptions in step 122..
+SBY 10:57:50 [bmc_bmc] engine_0: ##   0:00:58  Checking assertions in step 122..
+SBY 10:57:51 [bmc_bmc] engine_0: ##   0:00:58  Checking assumptions in step 123..
+SBY 10:57:49 [bmc_bmc] engine_0: ##   0:00:57  Checking assertions in step 123..
+SBY 10:57:49 [bmc_bmc] engine_0: ##   0:00:57  Checking assumptions in step 124..
+SBY 10:57:50 [bmc_bmc] engine_0: ##   0:00:58  Checking assertions in step 124..
+SBY 10:57:50 [bmc_bmc] engine_0: ##   0:00:58  Checking assumptions in step 125..
+SBY 10:57:51 [bmc_bmc] engine_0: ##   0:00:59  Checking assertions in step 125..
+SBY 10:57:52 [bmc_bmc] engine_0: ##   0:00:59  Checking assumptions in step 126..
+SBY 10:57:53 [bmc_bmc] engine_0: ##   0:01:00  Checking assertions in step 126..
+SBY 10:57:53 [bmc_bmc] engine_0: ##   0:01:01  Checking assumptions in step 127..
+SBY 10:57:54 [bmc_bmc] engine_0: ##   0:01:02  Checking assertions in step 127..
+SBY 10:57:54 [bmc_bmc] engine_0: ##   0:01:02  Checking assumptions in step 128..
+SBY 10:57:55 [bmc_bmc] engine_0: ##   0:01:03  Checking assertions in step 128..
+SBY 10:57:55 [bmc_bmc] engine_0: ##   0:01:03  Checking assumptions in step 129..
+SBY 10:57:56 [bmc_bmc] engine_0: ##   0:01:04  Checking assertions in step 129..
+SBY 10:57:57 [bmc_bmc] engine_0: ##   0:01:04  Checking assumptions in step 130..
+SBY 10:57:57 [bmc_bmc] engine_0: ##   0:01:05  Checking assertions in step 130..
+SBY 10:57:58 [bmc_bmc] engine_0: ##   0:01:06  Checking assumptions in step 131..
+SBY 10:57:59 [bmc_bmc] engine_0: ##   0:01:07  Checking assertions in step 131..
+SBY 10:57:59 [bmc_bmc] engine_0: ##   0:01:07  Checking assumptions in step 132..
+SBY 10:58:00 [bmc_bmc] engine_0: ##   0:01:08  Checking assertions in step 132..
+SBY 10:58:00 [bmc_bmc] engine_0: ##   0:01:08  Checking assumptions in step 133..
+SBY 10:58:01 [bmc_bmc] engine_0: ##   0:01:09  Checking assertions in step 133..
+SBY 10:58:02 [bmc_bmc] engine_0: ##   0:01:09  Checking assumptions in step 134..
+SBY 10:58:03 [bmc_bmc] engine_0: ##   0:01:10  Checking assertions in step 134..
+SBY 10:58:03 [bmc_bmc] engine_0: ##   0:01:11  Checking assumptions in step 135..
+SBY 10:58:04 [bmc_bmc] engine_0: ##   0:01:12  Checking assertions in step 135..
+SBY 10:58:04 [bmc_bmc] engine_0: ##   0:01:12  Checking assumptions in step 136..
+SBY 10:58:05 [bmc_bmc] engine_0: ##   0:01:13  Checking assertions in step 136..
+SBY 10:58:05 [bmc_bmc] engine_0: ##   0:01:13  Checking assumptions in step 137..
+SBY 10:58:06 [bmc_bmc] engine_0: ##   0:01:14  Checking assertions in step 137..
+SBY 10:58:07 [bmc_bmc] engine_0: ##   0:01:14  Checking assumptions in step 138..
+SBY 10:58:08 [bmc_bmc] engine_0: ##   0:01:15  Checking assertions in step 138..
+SBY 10:58:08 [bmc_bmc] engine_0: ##   0:01:16  Checking assumptions in step 139..
+SBY 10:58:09 [bmc_bmc] engine_0: ##   0:01:17  Checking assertions in step 139..
+SBY 10:58:09 [bmc_bmc] engine_0: ##   0:01:17  Status: passed
+SBY 10:58:09 [bmc_bmc] engine_0: finished (returncode=0)
+SBY 10:58:09 [bmc_bmc] engine_0: Status returned by engine: pass
+SBY 10:58:09 [bmc_bmc] summary: Elapsed clock time [H:MM:SS (secs)]: 0:01:23 (83)
+SBY 10:58:09 [bmc_bmc] summary: Elapsed process time [H:MM:SS (secs)]: 0:01:19 (79)
+SBY 10:58:09 [bmc_bmc] summary: engine_0 (smtbmc boolector) returned pass
+SBY 10:58:09 [bmc_bmc] summary: engine_0 did not produce any traces
+SBY 10:58:09 [bmc_bmc] DONE (PASS, rc=0)
+----- SSM_unit rc=0
+===== FORMAL attention_unit
+SBY 10:58:10 [bmc_bmc] Removing directory '/home/jese/tinyllm/src/attention_unit/formal/bmc_bmc'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/attention_unit/formal/../../../systemverilog_fp_unit/rtl/fp_pkg.sv' to '/home/jese/tinyllm/src/attention_unit/formal/bmc_bmc/src/fp_pkg.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/attention_unit/formal/fp_unit_stub.sv' to '/home/jese/tinyllm/src/attention_unit/formal/bmc_bmc/src/fp_unit_stub.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/attention_unit/formal/fp_exp_seq_stub.sv' to '/home/jese/tinyllm/src/attention_unit/formal/bmc_bmc/src/fp_exp_seq_stub.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/attention_unit/formal/matrix_unit_stub.sv' to '/home/jese/tinyllm/src/attention_unit/formal/bmc_bmc/src/matrix_unit_stub.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/attention_unit/formal/../../../systemverilog_fp_unit/rtl/fp32_to_bf16_round.sv' to '/home/jese/tinyllm/src/attention_unit/formal/bmc_bmc/src/fp32_to_bf16_round.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/attention_unit/formal/../attn_softmax_seq.sv' to '/home/jese/tinyllm/src/attention_unit/formal/bmc_bmc/src/attn_softmax_seq.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/attention_unit/formal/../attention_unit.sv' to '/home/jese/tinyllm/src/attention_unit/formal/bmc_bmc/src/attention_unit.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/attention_unit/formal/attention_props.sv' to '/home/jese/tinyllm/src/attention_unit/formal/bmc_bmc/src/attention_props.sv'.
+SBY 10:58:10 [bmc_bmc] engine_0: smtbmc boolector
+SBY 10:58:10 [bmc_bmc] base: starting process "cd bmc_bmc/src; yosys -ql ../model/design.log ../model/design.ys"
+SBY 10:58:10 [bmc_bmc] base: ERROR: Module `matrix_unit' referenced in module `attention_unit' in cell `u_o' does not have a parameter named 'LANES'.
+SBY 10:58:10 [bmc_bmc] base: finished (returncode=1)
+SBY 10:58:10 [bmc_bmc] base: task failed. ERROR.
+SBY 10:58:10 [bmc_bmc] summary: Elapsed clock time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 10:58:10 [bmc_bmc] summary: Elapsed process time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 10:58:10 [bmc_bmc] summary: engine_0 (smtbmc boolector) did not return a status
+SBY 10:58:10 [bmc_bmc] summary: engine_0 did not produce any traces
+SBY 10:58:10 [bmc_bmc] DONE (ERROR, rc=16)
+SBY 10:58:10 The following tasks failed: ['bmc']
+----- attention_unit rc=16
+===== FORMAL mamba2_unit
+SBY 10:58:10 [bmc_bmc] Removing directory '/home/jese/tinyllm/src/mamba2_unit/formal/bmc_bmc'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/mamba2_unit/formal/../../../systemverilog_fp_unit/rtl/fp_pkg.sv' to '/home/jese/tinyllm/src/mamba2_unit/formal/bmc_bmc/src/fp_pkg.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/mamba2_unit/formal/fp_unit_stub.sv' to '/home/jese/tinyllm/src/mamba2_unit/formal/bmc_bmc/src/fp_unit_stub.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/mamba2_unit/formal/fp_exp_seq_stub.sv' to '/home/jese/tinyllm/src/mamba2_unit/formal/bmc_bmc/src/fp_exp_seq_stub.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/mamba2_unit/formal/matrix_unit_stub.sv' to '/home/jese/tinyllm/src/mamba2_unit/formal/bmc_bmc/src/matrix_unit_stub.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/mamba2_unit/formal/conv1d_unit_stub.sv' to '/home/jese/tinyllm/src/mamba2_unit/formal/bmc_bmc/src/conv1d_unit_stub.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/mamba2_unit/formal/ssm_unit_stub.sv' to '/home/jese/tinyllm/src/mamba2_unit/formal/bmc_bmc/src/ssm_unit_stub.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/mamba2_unit/formal/silu_seq_stub.sv' to '/home/jese/tinyllm/src/mamba2_unit/formal/bmc_bmc/src/silu_seq_stub.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/mamba2_unit/formal/../../../systemverilog_fp_unit/rtl/fp32_to_bf16_round.sv' to '/home/jese/tinyllm/src/mamba2_unit/formal/bmc_bmc/src/fp32_to_bf16_round.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/mamba2_unit/formal/../mamba2_unit.sv' to '/home/jese/tinyllm/src/mamba2_unit/formal/bmc_bmc/src/mamba2_unit.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/mamba2_unit/formal/mamba2_props.sv' to '/home/jese/tinyllm/src/mamba2_unit/formal/bmc_bmc/src/mamba2_props.sv'.
+SBY 10:58:10 [bmc_bmc] engine_0: smtbmc boolector
+SBY 10:58:10 [bmc_bmc] base: starting process "cd bmc_bmc/src; yosys -ql ../model/design.log ../model/design.ys"
+SBY 10:58:10 [bmc_bmc] base: ERROR: Module `matrix_unit' referenced in module `mamba2_unit' in cell `u_outproj' does not have a parameter named 'LANES'.
+SBY 10:58:10 [bmc_bmc] base: finished (returncode=1)
+SBY 10:58:10 [bmc_bmc] base: task failed. ERROR.
+SBY 10:58:10 [bmc_bmc] summary: Elapsed clock time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 10:58:10 [bmc_bmc] summary: Elapsed process time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 10:58:10 [bmc_bmc] summary: engine_0 (smtbmc boolector) did not return a status
+SBY 10:58:10 [bmc_bmc] summary: engine_0 did not produce any traces
+SBY 10:58:10 [bmc_bmc] DONE (ERROR, rc=16)
+SBY 10:58:10 The following tasks failed: ['bmc']
+----- mamba2_unit rc=16
+===== FORMAL mlp_unit
+SBY 10:58:10 [bmc_bmc] Removing directory '/home/jese/tinyllm/src/mlp_unit/formal/bmc_bmc'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/mlp_unit/formal/../../../systemverilog_fp_unit/rtl/fp_pkg.sv' to '/home/jese/tinyllm/src/mlp_unit/formal/bmc_bmc/src/fp_pkg.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/mlp_unit/formal/fp_unit_stub.sv' to '/home/jese/tinyllm/src/mlp_unit/formal/bmc_bmc/src/fp_unit_stub.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/mlp_unit/formal/fp_exp_seq_stub.sv' to '/home/jese/tinyllm/src/mlp_unit/formal/bmc_bmc/src/fp_exp_seq_stub.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/mlp_unit/formal/matrix_unit_stub.sv' to '/home/jese/tinyllm/src/mlp_unit/formal/bmc_bmc/src/matrix_unit_stub.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/mlp_unit/formal/../../../systemverilog_fp_unit/rtl/fp32_to_bf16_round.sv' to '/home/jese/tinyllm/src/mlp_unit/formal/bmc_bmc/src/fp32_to_bf16_round.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/mlp_unit/formal/../SwiGLU_unit/swiglu_unit.sv' to '/home/jese/tinyllm/src/mlp_unit/formal/bmc_bmc/src/swiglu_unit.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/mlp_unit/formal/../mlp_unit.sv' to '/home/jese/tinyllm/src/mlp_unit/formal/bmc_bmc/src/mlp_unit.sv'.
+SBY 10:58:10 [bmc_bmc] Copy '/home/jese/tinyllm/src/mlp_unit/formal/mlp_props.sv' to '/home/jese/tinyllm/src/mlp_unit/formal/bmc_bmc/src/mlp_props.sv'.
+SBY 10:58:10 [bmc_bmc] engine_0: smtbmc boolector
+SBY 10:58:10 [bmc_bmc] base: starting process "cd bmc_bmc/src; yosys -ql ../model/design.log ../model/design.ys"
+SBY 10:58:10 [bmc_bmc] base: ERROR: Module `matrix_unit' referenced in module `swiglu_unit' in cell `u_down' does not have a parameter named 'LANES'.
+SBY 10:58:10 [bmc_bmc] base: finished (returncode=1)
+SBY 10:58:10 [bmc_bmc] base: task failed. ERROR.
+SBY 10:58:10 [bmc_bmc] summary: Elapsed clock time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 10:58:10 [bmc_bmc] summary: Elapsed process time [H:MM:SS (secs)]: 0:00:00 (0)
+SBY 10:58:10 [bmc_bmc] summary: engine_0 (smtbmc boolector) did not return a status
+SBY 10:58:10 [bmc_bmc] summary: engine_0 did not produce any traces
+SBY 10:58:10 [bmc_bmc] DONE (ERROR, rc=16)
+SBY 10:58:10 The following tasks failed: ['bmc']
+----- mlp_unit rc=16
+ALL_FORMAL_DONE
