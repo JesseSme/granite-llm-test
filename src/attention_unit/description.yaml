@@ -1,4 +1,4 @@
-# status: verified: unit 1536/1536 bit-exact, in-loop bit-exact vs layer-10 eager attention; formal depth 220 PASS
+# status: verified after fp_unit protocol migration: unit 1536/1536 bit-exact, in-loop max abs 0.0 (0/6912 outside), formal depth 220 PASS
 #Description
 
 llm_guidance: 
@@ -129,16 +129,21 @@ characteristics:
     Weight load: HIDDEN*(HIDDEN + 2*KV_HEADS*HEAD_DIM + HIDDEN) cycles =
     1,572,864 at 768/4/64 (one bf16 weight per cycle, ~10.5 ms at 150 MHz).
     Per token: input frame (768) + broadcast feed to Q/K/V (768) + drains
-    (768 + 256 + 256) + per-head score/softmax/context (~1.4k x 12) +
-    context feed (768) + O drain (768) plus the Q/O projection MAC time. The
-    projections use matrix_unit with MATRIX_LANES = 4 (four output rows per
-    pass, bit-identical), which cuts the projection part ~4x: measured
-    ~0.4M cycles per token in the in-loop run (~2.7 ms at 150 MHz), down from
-    ~1.6M at LANES=1. The position counter increments once per frame.
+    (768 + 256 + 256) + per-head score/softmax/context + context feed (768) +
+    O drain (768) plus the Q/O projection MAC time. The projections use
+    matrix_unit with MATRIX_LANES = 4 (four output rows per pass,
+    bit-identical), which cuts the projection part ~4x. The per-head loops are
+    serialized around the fp_unit out_valid handshake: the score loop issues
+    64 MACs per key at ~6 cycles each, the row softmax costs ~33 cycles per
+    element (iterative DIV 17) and the context loop issues 64 lanes x keys at
+    ~6 cycles each. Measured in-loop after the protocol migration: ~0.49M
+    cycles per token (~3.3 ms at 150 MHz); the Q/O projections still dominate.
+    The position counter increments once per frame.
   throughput: >
-    One token per ~0.4M cycles; the Q and O projections still dominate. K/V
-    projections run concurrently with the Q projection (the same input vector
-    is broadcast to all three).
+    One token per ~0.49M cycles; the Q and O projections dominate (the
+    serialized score/softmax/context loops add ~0.2M for a 9-token prompt).
+    K/V projections run concurrently with the Q projection (the same input
+    vector is broadcast to all three).
   resource_usage: >
     KV cache: 2 x KV_HEADS x MAX_SEQ x HEAD_DIM bf16 (32,768 words = 64 KB at
     4x64x64). Buffers: x/q/ctx 768 x 16-bit each. Four matrix_unit instances
@@ -157,6 +162,14 @@ characteristics:
     (~1e-5 relative error); since the model rounds probabilities to bf16, the
     rounded probabilities and the final output match the model exactly in
     practice.
+    fp_unit protocol migration: every operation (score MAC, scale MUL,
+    context MAC) is started with a 1-cycle in_valid pulse and each result is
+    latched on out_valid; because the datapath outputs hold only ~1 cycle past
+    out_valid, the loop registers (product, accumulator, scaled score) are
+    latched on the pulse rather than read in a later state. The accumulation
+    order (0+0 seed then products in order) and operands are unchanged, so the
+    unit stays bit-exact vs the model and the golden sample (unit 64/64 and
+    1536/1536, in-loop max abs 0.0).
   unit_verification: >
     tb_attention_unit.py: small config (HIDDEN=16, HEADS=2, KV_HEADS=1,
     HEAD_DIM=8, MAX_SEQ=4, 4 tokens) 64/64 bit-exact vs the fp32 golden;
@@ -167,16 +180,18 @@ characteristics:
     tb_attention_unit_inloop.py: real layer-10 hidden states and weights from a
     Granite 4.0-H-350M eager-attention forward pass (9-token prompt); DUT
     output vs the model's attention output: max abs 0.0, max rel 0.0,
-    0/6912 elements outside 1e-3/1e-3 (bit-exact). Re-run with
-    MATRIX_LANES = 4: same bit-exact result (max abs 0.0, 0/6912 outside),
-    ~12 min instead of ~46 min; measured ~0.4M cycles/token. Run:
-    `.venv/bin/python run_test.py inloop`.
+    0/6912 elements outside 1e-3/1e-3 (bit-exact). Re-run after the fp_unit
+    protocol migration: same bit-exact result (max abs 0.0, 0/6912 outside),
+    measured ~0.49M cycles/token. Run: `.venv/bin/python run_test.py inloop`.
   formal_verification: >
     formal/bmc.sby: BMC depth 220 (smtbmc boolector) on a HIDDEN=8/2/1/4/2
     instance with the FP datapaths abstracted (matrix_unit stub with the exact
-    handshake timing and constant data, fp_unit/fp_exp_seq constant outputs).
+    handshake timing and constant data, fp_unit datapath outputs constant zero
+    and out_valid pulsing the cycle after in_valid, fp_exp_seq stub).
     Properties: tready == !busy; tvalid only while busy; tlast exactly on the
     HIDDEN-th output beat; at most HIDDEN output beats per activation; a busy
     period ends only after all HIDDEN output beats were accepted; no output
-    beats before the first complete input frame. PASSES.
-    Run: `sby -f bmc.sby` (cap memory with `ulimit -v` if needed).
+    beats before the first complete input frame. PASSES (re-run after the
+    protocol migration; the matrix stub gained the LANES parameter introduced
+    by the LANES=4 rollout). Run: `sby -f bmc.sby` (cap memory with
+    `ulimit -v` if needed).

@@ -1,9 +1,12 @@
-// Formal abstraction of fp_unit: outputs are constant zero.
+// Formal abstraction of fp_unit: datapath outputs are constant zero and
+// out_valid pulses one cycle after in_valid (the true latency is 3-17 cycles
+// depending on the operation; the control properties are latency-agnostic and
+// only require that a started transaction eventually reports completion).
 //
-// The attention control flow does not depend on FP results, so tying the
-// datapath outputs to zero (instead of anyseq) keeps the framing/sequencing
-// properties meaningful while removing thousands of free bits per cycle from
-// the BMC problem. Same port list and parameters as the real unit.
+// The datapath outputs are tied to zero (instead of anyseq) to keep the
+// framing/sequencing properties meaningful while removing thousands of free
+// bits per cycle from the BMC problem. Same port list and parameters as the
+// real unit.
 
 module fp_unit #(
   parameter int W_EXP  = 8,
@@ -23,9 +26,18 @@ module fp_unit #(
   output logic                      out_valid
 );
 
-  assign y     = '0;
-  assign cmp   = '0;
-  assign flags = '0;
-  assign out_valid = '0;
+  logic ov_r;
+
+  always_ff @(posedge clk) begin
+    if (!rst_n)
+      ov_r <= 1'b0;
+    else
+      ov_r <= in_valid;
+  end
+
+  assign y         = '0;
+  assign cmp       = '0;
+  assign flags     = '0;
+  assign out_valid = ov_r;
 
 endmodule

@@ -22,6 +22,11 @@
 // The scaling constant is config.attention_multiplier = 0.015625 (not
 // 1/sqrt(head_dim)); there is no RoPE (NoPE) and no bias in the projections.
 //
+// fp_unit protocol: the score/context MAC loops use explicit per-operation
+// issue/wait states (a 1-cycle in_valid pulse, result latched on out_valid;
+// MUL 4, ADD 3, DIV 17, MAX 1 cycles for binary32). The accumulation order is
+// unchanged (0+0 seed, then products in order), so results are bit-identical.
+//
 // The output frame is HIDDEN bf16 beats (tlast on the last beat), held stable
 // under downstream backpressure.
 
@@ -182,7 +187,7 @@ module attention_unit #(
     .mode(fp_pkg::OP_MUL), .rm(fp_pkg::RM_RNE),
     .a(mul_a), .b(mul_b), .c('0),
     .y(mul_y), .cmp(/*unused*/), .flags(/*unused*/),
-    .in_valid(1'b1), .out_valid(unused_out_valid_mul)
+    .in_valid(go_mul), .out_valid(mul_ov)
   );
 
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_add (
@@ -190,17 +195,22 @@ module attention_unit #(
     .mode(fp_pkg::OP_ADD), .rm(fp_pkg::RM_RNE),
     .a(add_a), .b(add_b), .c('0),
     .y(add_y), .cmp(/*unused*/), .flags(/*unused*/),
-    .in_valid(1'b1), .out_valid(unused_out_valid_add)
+    .in_valid(go_add), .out_valid(add_ov)
   );
   /* verilator lint_on PINCONNECTEMPTY */
 
   logic [31:0] mul_a, mul_b, mul_y;
   logic [31:0] add_a, add_b, add_y;
+  logic        go_mul, go_add, mul_ov, add_ov;
 
-  logic [15:0] score_bf, scaled_bf, ctx_bf;
-  fp32_to_bf16_round u_round_score  (.x(add_y), .y(score_bf));
-  fp32_to_bf16_round u_round_scaled (.x(mul_y), .y(scaled_bf));
-  fp32_to_bf16_round u_round_ctx    (.x(add_y), .y(ctx_bf));
+  logic [31:0] prod_reg, acc_reg;     // score loop: latched mul / acc results
+  logic [31:0] cprod_reg, cacc_reg;   // context loop
+  logic [15:0] score_bf, scaled_bf, ctx_bf, scaled_r;
+  // fp_unit outputs hold only ~1 cycle past out_valid, so the loop registers
+  // are latched on the out_valid pulse and consumed from there.
+  fp32_to_bf16_round u_round_score  (.x(acc_reg),  .y(score_bf));
+  fp32_to_bf16_round u_round_scaled (.x(mul_y),    .y(scaled_bf));
+  fp32_to_bf16_round u_round_ctx    (.x(cacc_reg), .y(ctx_bf));
 
   // ------------------------------------------------------------ counters
   logic [X_W-1:0] in_cnt, f_cnt, dq_cnt;
@@ -235,13 +245,23 @@ module attention_unit #(
     DRK,        // drain K projection -> k_cache[pos]
     DRV,        // drain V projection -> v_cache[pos]
     A_S_INIT,   // start a query head: j = 0
-    A_S_MAC,    // score_j dot product over d
-    A_S_LAST,   // add final product
-    A_S_SCALE,  // bf16 round + multiply by attention_multiplier
+    A_S_MUL_REQ,// issue mul(q_j, k_j)
+    A_S_MUL_W,  // wait for the product
+    A_S_ADD_REQ,// issue add(acc, product_j)
+    A_S_SEED_REQ,// 0 + 0 accumulator seed (j = 0)
+    A_S_SEED_W,
+    A_S_ADD_W,
+    A_S_SCALE_REQ,// issue mul(bf16(score), 0.015625)
+    A_S_SCALE_W,
     A_S_STORE,  // bf16 round + push score into the softmax row
     A_S_WAIT,   // wait for the softmax row
-    A_C_MAC,    // context_d dot product over cached j
-    A_C_LAST,   // add final product
+    A_C_INIT,   // start the context loop: j = 0
+    A_C_MUL_REQ,// issue mul(p_j, v_j[d])
+    A_C_MUL_W,
+    A_C_ADD_REQ,
+    A_C_SEED_REQ,
+    A_C_SEED_W,
+    A_C_ADD_W,
     A_C_STORE,  // bf16 round + store context
     FEED_O,     // broadcast ctx_buf into the O projection
     DRAIN_O     // stream O projection output = unit output
@@ -258,13 +278,13 @@ module attention_unit #(
 
   assign sp_valid = (state == A_S_STORE);
   assign sp_last  = (state == A_S_STORE) && (j_cnt == pos);
-  assign sp_data  = {scaled_bf, 16'b0};
+  assign sp_data  = {scaled_r, 16'b0};
 
   always_comb begin
-    mul_a = '0;
-    mul_b = '0;
-    add_a = '0;
-    add_b = '0;
+    mul_a  = '0;
+    mul_b  = '0;
+    add_a  = '0;
+    add_b  = '0;
 
     q_s_tvalid = 1'b0;
     k_s_tvalid = 1'b0;
@@ -285,43 +305,42 @@ module attention_unit #(
         v_s_tdata  = x_buf[f_cnt];
       end
 
-      A_S_MAC: begin
-        mul_a = {q_buf[q_addr], 16'b0};
-        mul_b = {k_cache[k_rd_addr], 16'b0};
-        if (d_cnt == D_W'(0)) begin
-          add_a = '0;
-          add_b = '0;
-        end else begin
-          add_a = add_y;
-          add_b = mul_y;
-        end
+      // The operand registers hold their values through the first WAIT cycle
+      // (the go pulse is registered), so the REQ/W states drive the same
+      // operands; in_valid (go_*) is asserted only in the REQ state.
+      A_S_MUL_REQ, A_S_MUL_W: begin
+        mul_a  = {q_buf[q_addr], 16'b0};
+        mul_b  = {k_cache[k_rd_addr], 16'b0};
       end
 
-      A_S_LAST: begin
-        add_a = add_y;
-        add_b = mul_y;
+      A_S_SEED_REQ, A_S_SEED_W: begin
+        add_a  = '0;
+        add_b  = '0;
       end
 
-      A_S_SCALE: begin
-        mul_a = {score_bf, 16'b0};
-        mul_b = C_SCALE;
+      A_S_ADD_REQ, A_S_ADD_W: begin
+        add_a  = acc_reg;
+        add_b  = prod_reg;
       end
 
-      A_C_MAC: begin
-        mul_a = sp_rd_data;
-        mul_b = {v_cache[v_rd_addr], 16'b0};
-        if (j_cnt == J_W'(0)) begin
-          add_a = '0;
-          add_b = '0;
-        end else begin
-          add_a = add_y;
-          add_b = mul_y;
-        end
+      A_S_SCALE_REQ, A_S_SCALE_W: begin
+        mul_a  = {score_bf, 16'b0};
+        mul_b  = C_SCALE;
       end
 
-      A_C_LAST: begin
-        add_a = add_y;
-        add_b = mul_y;
+      A_C_MUL_REQ, A_C_MUL_W: begin
+        mul_a  = sp_rd_data;
+        mul_b  = {v_cache[v_rd_addr], 16'b0};
+      end
+
+      A_C_SEED_REQ, A_C_SEED_W: begin
+        add_a  = '0;
+        add_b  = '0;
+      end
+
+      A_C_ADD_REQ, A_C_ADD_W: begin
+        add_a  = cacc_reg;
+        add_b  = cprod_reg;
       end
 
       FEED_O: begin
@@ -354,6 +373,13 @@ module attention_unit #(
       j_cnt   <= '0;
       d_cnt   <= '0;
       pos     <= '0;
+      go_mul  <= 1'b0;
+      go_add  <= 1'b0;
+      prod_reg  <= '0;
+      acc_reg   <= '0;
+      cprod_reg <= '0;
+      cacc_reg  <= '0;
+      scaled_r  <= '0;
     end else begin
       case (state)
         // ---------------------------------------------------- input frame
@@ -424,20 +450,59 @@ module attention_unit #(
         A_S_INIT: begin
           j_cnt <= '0;
           d_cnt <= '0;
-          state <= A_S_MAC;
+          state <= A_S_MUL_REQ;
         end
 
-        A_S_MAC: begin
-          if (d_cnt == D_W'(HEAD_DIM - 1)) begin
-            d_cnt <= '0;
-            state <= A_S_LAST;
-          end else begin
-            d_cnt <= d_cnt + 1'b1;
+        A_S_MUL_REQ: begin go_mul <= 1'b1; state <= A_S_MUL_W; end
+
+        A_S_MUL_W: begin
+          if (go_mul) begin
+            go_mul <= 1'b0;
+          end else if (mul_ov) begin
+            // Inner loop over d: 0 starts the accumulator seed.
+            prod_reg <= mul_y;
+            state <= (d_cnt == D_W'(0)) ? A_S_SEED_REQ : A_S_ADD_REQ;
           end
         end
 
-        A_S_LAST:  state <= A_S_SCALE;
-        A_S_SCALE: state <= A_S_STORE;
+        A_S_SEED_REQ: begin
+          go_add <= 1'b1;
+          state  <= A_S_SEED_W;
+        end
+
+        A_S_SEED_W: begin
+          if (go_add) go_add <= 1'b0;
+          else if (add_ov) begin acc_reg <= add_y; state <= A_S_ADD_REQ; end
+        end
+
+        A_S_ADD_REQ: begin
+          go_add <= 1'b1;
+          state  <= A_S_ADD_W;
+        end
+
+        A_S_ADD_W: begin
+          if (go_add) begin
+            go_add <= 1'b0;
+          end else if (add_ov) begin
+            acc_reg <= add_y;
+            if (d_cnt == D_W'(HEAD_DIM - 1)) begin
+              state <= A_S_SCALE_REQ;     // score for this key complete
+            end else begin
+              d_cnt <= d_cnt + 1'b1;
+              state <= A_S_MUL_REQ;
+            end
+          end
+        end
+
+        A_S_SCALE_REQ: begin
+          go_mul <= 1'b1;
+          state  <= A_S_SCALE_W;
+        end
+
+        A_S_SCALE_W: begin
+          if (go_mul) go_mul <= 1'b0;
+          else if (mul_ov) begin scaled_r <= scaled_bf; state <= A_S_STORE; end
+        end
 
         A_S_STORE: begin
           if (j_cnt == pos) begin
@@ -445,7 +510,7 @@ module attention_unit #(
           end else begin
             j_cnt <= j_cnt + 1'b1;
             d_cnt <= '0;
-            state <= A_S_MAC;
+            state <= A_S_MUL_REQ;
           end
         end
 
@@ -453,19 +518,55 @@ module attention_unit #(
           if (sp_done) begin
             j_cnt <= '0;
             d_cnt <= '0;
-            state <= A_C_MAC;
+            state <= A_C_INIT;
           end
         end
 
-        A_C_MAC: begin
-          if (j_cnt == pos) begin
-            state <= A_C_LAST;
-          end else begin
-            j_cnt <= j_cnt + 1'b1;
+        // ---------------------------------------------------- context loop
+        A_C_INIT: begin
+          j_cnt <= '0;
+          state <= A_C_MUL_REQ;
+        end
+
+        A_C_MUL_REQ: begin go_mul <= 1'b1; state <= A_C_MUL_W; end
+
+        A_C_MUL_W: begin
+          if (go_mul) begin
+            go_mul <= 1'b0;
+          end else if (mul_ov) begin
+            cprod_reg <= mul_y;
+            state <= (j_cnt == J_W'(0)) ? A_C_SEED_REQ : A_C_ADD_REQ;
           end
         end
 
-        A_C_LAST: state <= A_C_STORE;
+        A_C_SEED_REQ: begin
+          go_add <= 1'b1;
+          state  <= A_C_SEED_W;
+        end
+
+        A_C_SEED_W: begin
+          if (go_add) go_add <= 1'b0;
+          else if (add_ov) begin cacc_reg <= add_y; state <= A_C_ADD_REQ; end
+        end
+
+        A_C_ADD_REQ: begin
+          go_add <= 1'b1;
+          state  <= A_C_ADD_W;
+        end
+
+        A_C_ADD_W: begin
+          if (go_add) begin
+            go_add <= 1'b0;
+          end else if (add_ov) begin
+            cacc_reg <= add_y;
+            if (j_cnt == pos) begin
+              state <= A_C_STORE;
+            end else begin
+              j_cnt <= j_cnt + 1'b1;
+              state <= A_C_MUL_REQ;
+            end
+          end
+        end
 
         A_C_STORE: begin
           ctx_buf[c_addr] <= ctx_bf;
@@ -481,7 +582,7 @@ module attention_unit #(
             end
           end else begin
             d_cnt <= d_cnt + 1'b1;
-            state <= A_C_MAC;
+            state <= A_C_MUL_REQ;
           end
         end
 

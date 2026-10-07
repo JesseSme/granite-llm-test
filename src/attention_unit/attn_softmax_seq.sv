@@ -46,16 +46,14 @@ module attn_softmax_seq #(
 
   // ------------------------------------------------------- units
   /* verilator lint_off PINCONNECTEMPTY */
-  /* verilator lint_off UNUSEDSIGNAL */
-  logic unused_out_valid_max, unused_out_valid_sub;
-  logic unused_out_valid_add, unused_out_valid_div;
-  /* verilator lint_on UNUSEDSIGNAL */
+  logic go_max, go_sub, go_add, go_div;   // 1-cycle in_valid pulses
+  logic max_ov, sub_ov, add_ov, div_ov;   // fp_unit out_valid
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_max (
     .clk(clk), .rst_n(rst_n),
     .mode(fp_pkg::OP_MAX), .rm(fp_pkg::RM_RNE),
     .a(max_a), .b(max_b), .c('0),
     .y(max_y), .cmp(/*unused*/), .flags(/*unused*/),
-    .in_valid(1'b1), .out_valid(unused_out_valid_max)
+    .in_valid(go_max), .out_valid(max_ov)
   );
 
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_sub (
@@ -63,7 +61,7 @@ module attn_softmax_seq #(
     .mode(fp_pkg::OP_SUB), .rm(fp_pkg::RM_RNE),
     .a(sub_a), .b(sub_b), .c('0),
     .y(sub_y), .cmp(/*unused*/), .flags(/*unused*/),
-    .in_valid(1'b1), .out_valid(unused_out_valid_sub)
+    .in_valid(go_sub), .out_valid(sub_ov)
   );
 
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_add (
@@ -71,7 +69,7 @@ module attn_softmax_seq #(
     .mode(fp_pkg::OP_ADD), .rm(fp_pkg::RM_RNE),
     .a(add_a), .b(add_b), .c('0),
     .y(add_y), .cmp(/*unused*/), .flags(/*unused*/),
-    .in_valid(1'b1), .out_valid(unused_out_valid_add)
+    .in_valid(go_add), .out_valid(add_ov)
   );
 
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_div (
@@ -79,7 +77,7 @@ module attn_softmax_seq #(
     .mode(fp_pkg::OP_DIV), .rm(fp_pkg::RM_RNE),
     .a(div_a), .b(div_b), .c('0),
     .y(div_y), .cmp(/*unused*/), .flags(/*unused*/),
-    .in_valid(1'b1), .out_valid(unused_out_valid_div)
+    .in_valid(go_div), .out_valid(div_ov)
   );
   /* verilator lint_on PINCONNECTEMPTY */
 
@@ -91,7 +89,7 @@ module attn_softmax_seq #(
     .start(exp_start), .x(exp_x), .y(exp_y), .done(exp_done)
   );
 
-  logic [15:0] p_bf;
+  logic [15:0] p_bf, p_r;
   fp32_to_bf16_round u_round_p (.x(div_y), .y(p_bf));
 
   logic [31:0] max_a, max_b, max_y;
@@ -168,6 +166,11 @@ module attn_softmax_seq #(
       done        <= 1'b0;
       running_max <= '0;
       sum         <= '0;
+      go_max      <= 1'b0;
+      go_sub      <= 1'b0;
+      go_add      <= 1'b0;
+      go_div      <= 1'b0;
+      p_r         <= '0;
     end else begin
       done <= 1'b0;
 
@@ -209,8 +212,22 @@ module attn_softmax_seq #(
           end
         end
 
-        S_MAX_SETUP: state <= S_MAX_WAIT;
-        S_MAX_WAIT:  state <= S_MAX_READ;
+        S_MAX_SETUP: begin go_max <= 1'b1; state <= S_MAX_WAIT; end
+        S_MAX_WAIT: begin
+          if (go_max) begin
+            go_max <= 1'b0;
+          end else if (max_ov) begin
+            // fp_unit outputs hold only one cycle past out_valid: latch here.
+            running_max <= max_y;
+            if (cnt == row_len - 1'b1) begin
+              cnt   <= '0;
+              state <= S_SUB_SETUP;
+            end else begin
+              cnt   <= cnt + 1'b1;
+              state <= S_MAX_SETUP;
+            end
+          end
+        end
 
         S_MAX_READ: begin
           running_max <= max_y;
@@ -223,8 +240,11 @@ module attn_softmax_seq #(
           end
         end
 
-        S_SUB_SETUP: state <= S_SUB_WAIT;
-        S_SUB_WAIT:  state <= S_EXP_START;
+        S_SUB_SETUP: begin go_sub <= 1'b1; state <= S_SUB_WAIT; end
+        S_SUB_WAIT: begin
+          if (go_sub) go_sub <= 1'b0;
+          else if (sub_ov) state <= S_EXP_START;
+        end
         S_EXP_START: state <= S_EXP_WAIT;
 
         S_EXP_WAIT: begin
@@ -250,14 +270,23 @@ module attn_softmax_seq #(
 
         S_SUM_SETUP: begin
           if (cnt < row_len) begin
-            state <= S_SUM_WAIT;
+            go_add <= 1'b1;
+            state  <= S_SUM_WAIT;
           end else begin
             cnt   <= '0;
             state <= S_NORM_DIV;
           end
         end
 
-        S_SUM_WAIT: state <= S_SUM_READ;
+        S_SUM_WAIT: begin
+          if (go_add) begin
+            go_add <= 1'b0;
+          end else if (add_ov) begin
+            sum   <= add_y;
+            cnt   <= cnt + 1'b1;
+            state <= S_SUM_SETUP;
+          end
+        end
 
         S_SUM_READ: begin
           sum   <= add_y;
@@ -265,11 +294,14 @@ module attn_softmax_seq #(
           state <= S_SUM_SETUP;
         end
 
-        S_NORM_DIV: state <= S_NORM_WAIT;
-        S_NORM_WAIT: state <= S_NORM_OUT;
+        S_NORM_DIV: begin go_div <= 1'b1; state <= S_NORM_WAIT; end
+        S_NORM_WAIT: begin
+          if (go_div) go_div <= 1'b0;
+          else if (div_ov) begin p_r <= p_bf; state <= S_NORM_OUT; end
+        end
 
         S_NORM_OUT: begin
-          p_buf[cnt] <= p_bf;
+          p_buf[cnt] <= p_r;
           if (cnt == row_len - 1'b1) begin
             state <= S_DONE;
           end else begin
