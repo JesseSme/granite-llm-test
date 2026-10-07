@@ -103,7 +103,8 @@ async def test_softmax_inloop(dut):
             dut.last_in.value = 0
 
             row_outputs = []
-            for _ in range(s * 40):
+            # Serialized fp_unit ops (DIV 17 cycles) need ~40 cycles/element.
+            for _ in range(s * 100):
                 await RisingEdge(dut.clk)
                 if int(dut.valid_out.value) == 1:
                     row_outputs.append(int(dut.data_out.value))

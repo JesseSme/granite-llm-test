@@ -1,4 +1,4 @@
-# status: verified: in-loop 3888/3888 rows, formal depth 120 PASS; LUT exp is coarse (max rel 0.209), attention uses attn_softmax_seq instead
+# status: verified after fp_unit protocol migration: unit/in-loop 3888/3888 rows, formal depth 120 PASS; LUT exp is coarse (max rel 0.209), attention uses attn_softmax_seq instead
 #Description
 
 llm_guidance: 
@@ -65,23 +65,29 @@ max_clock_speed: 100 MHz
 
 characteristics:
   latency: >
-    Per row of N elements: ~3N (MAX) + 5N (SUB_EXP) + 3N (SUM) + 3N (NORM) = 14N cycles.
-    For N=8: ~112 cycles. For N=32: ~448 cycles.
-  throughput: 1 row per 14N cycles
+    Per row of N elements: ~2-3N (MAX, latency 1) + ~5N (SUB, 3 + wait) + 2N
+    (LUT exp) + ~5N (SUM, 3 + wait) + ~19N (DIV, iterative, 17 + wait) ≈ 33N
+    cycles. For N=8: ~264 cycles. For N=32: ~1056 cycles.
+  throughput: 1 row per ~33N cycles
   resource_usage: >
     4x fp_unit instances (MAX, SUB, ADD, DIV) + 1x fp_exp (LUT-based).
     exp_buf: N x 32-bit SRAM. input_buf: N x 32-bit SRAM.
   notes: >
     Numerically stable: subtracts max before exp to prevent overflow.
     exp() implemented as 256-entry LUT with direct addressing from float32 exponent/mantissa.
-    Sequential FSM with explicit wait cycles to account for fp_unit's 1-cycle registered output.
+    fp_unit protocol migration: each operation is started with a 1-cycle
+    in_valid pulse and every result is latched on the out_valid pulse (the
+    datapath outputs hold only ~1 cycle past out_valid). The DIV engine is
+    iterative, so normalization is ~19 cycles per element. The op order and
+    operands are unchanged.
     Max absolute error ~0.006 vs PyTorch reference (due to LUT quantization in exp).
   in_loop_verification: >
     tb_softmax_unit_inloop.py loads Granite 4.0-H-350M with eager attention and
     monkeypatches torch.nn.functional.softmax to capture the real (B, 12, S, S)
     scaled QK^T attention logits and their float32 softmax results. 3888/3888
-    rows pass with max abs error 0.005668 and max row-sum error 0.000000.
+    rows pass with max abs error 0.005668 and max row-sum error 0.000000
+    (re-run after the fp_unit protocol migration).
   formal_verification: >
     formal/bmc.sby (SymbiYosys BMC, depth 120, fp_unit/fp_exp abstracted via
     anyseq stubs) proves done always coincides with the final valid_out of a
-    row. Run: sby -f bmc.sby.
+    row. Run: sby -f bmc.sby. PASS after the fp_unit protocol migration.

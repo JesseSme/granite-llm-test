@@ -67,7 +67,9 @@ async def test_softmax_unit(dut):
         # Don't wait for done first - collect valid_out pulses
         row_outputs = []
         row_mismatches = 0
-        timeout = N * 20  # generous timeout per row
+        # The pipelined fp_unit serializes each operation (MUL 4, ADD 3,
+        # DIV 17 cycles), so a row takes ~30 cycles/element; collect until done.
+        timeout = N * 200
 
         for _ in range(timeout):
             await RisingEdge(dut.clk)
