@@ -4,9 +4,9 @@
 
 - [x] RTL passes Verilator lint with `-Wall` (no warnings).
 - [x] cocotb testbench passes against golden sample for all test vectors.
-- [x] In-loop test passes — 13824/13824 outputs (9 timesteps × 1536 channels) within
-      0.1 abs of the recomputed causal conv on real layer-0 Mamba projected states;
-      max abs error 0.03125.
+- [x] In-loop test passes — 13824/13824 outputs (9 timesteps × 1536 channels)
+      bit-exact vs the recomputed causal conv on real layer-0 Mamba projected
+      states; max abs error 0.0 (re-run after the fp_unit protocol migration).
 - [x] `description.yaml` is updated with interface, Fmax, and characteristics.
 - [x] No hardcoded magic numbers — use parameters or `define` constants.
 - [x] Follows existing code conventions (see `systemverilog_fp_unit/rtl/`).

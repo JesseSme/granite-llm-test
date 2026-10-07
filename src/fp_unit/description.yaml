@@ -8,18 +8,24 @@ description: An IEEE 754-2019 accurate floating_point_unit.
 location: ../../systemverilog_fp_unit
 
 migration_note: >
-  The FP library submodule now has upstream's pipelined fp_unit (commit
-  0a75e4c, "Fmax 250MHz"): the op datapaths run with fixed per-operation
-  latencies and are started by in_valid (ITER_DIVSQRT now defaults to 1).
-  This CHANGES the module protocol: the outer units currently assume the
-  previous 1-cycle registered output with always-present operands, so moving
-  the outer gitlink past 6907045 breaks them (demonstrated: the
-  residual_adder_unit golden test fails 6137/6144).
-  TO MIGRATE: for each unit, drive in_valid on each operand presentation and
-  wait the documented per-op latency before reading y (and/or use the new
-  *_pipe modules), keeping every unit bit-exact against its golden sample;
-  re-run unit + in-loop + formal per unit. The library's own suites also need
-  the four Verilator-5.051-only warning classes waived (IMPLICITSTATIC,
-  MULTIDRIVEN, VARHIDDEN, MULTITOP) to run on this machine (the library pins
-  Verilator 5.020).
-  Until then the outer repo stays pinned at 6907045 (pre-upstream-pull).
+  Protocol migration COMPLETE on branch opt/fp-unit-migration. The outer repo
+  pins the library at commit 86edefc (branch opt/fp-mul-pipe-stream), which
+  contains upstream's pipelined fp_unit plus the local fp_mul_pipe streaming
+  fix (with back-to-back starts the M1 stage combined each product with the
+  next transaction's context).
+  fp_unit is now transaction based: assert in_valid for exactly one cycle and
+  latch y on the out_valid pulse. Binary32 latencies (start cycle -> result
+  cycle): ADD/SUB 3, MUL 4, DIV/SQRT 17, FMA 8, min/max/cmp/totalOrder 1,
+  rndint 2. ADD/MUL accept a new start every cycle (streaming); DIV/SQRT
+  serialize and need >=1 dead cycle after out_valid. Results are stable only
+  on the out_valid cycle (and ~1 cycle past it), so sequential engines latch
+  every result into a local register on out_valid instead of reading y in a
+  later state.
+  All outer units were migrated keeping their per-element operation order and
+  operands unchanged (bit-exact where the old unit was bit-exact):
+  residual_adder, RMSNorm, embedding_lookup, conv1d, softmax,
+  output_projection, attention (attention_unit + attn_softmax_seq), mamba2
+  (incl. silu_seq), mlp/SwiGLU, SSM (incl. fp_exp_seq, fp_softplus_seq).
+  The LANES=4 matrix datapaths (fp_add_pipe2/fp_mul_pipe2) are unaffected.
+  Unit/in-loop/formal results are recorded per unit in
+  src/<unit>/description.yaml.

@@ -24,20 +24,20 @@ Key config constants (must appear exactly in the RTL):
 
 | Unit (`src/...`) | Status |
 |---|---|
-| `embedding_lookup_unit` | verified: unit + in-loop 16896/16896 bit-exact; formal PASS |
-| `residual_adder_unit` | verified: unit 6144/6144, in-loop 52224/52224 bit-exact; fp32 datapath with 0.246 built in; formal PASS |
+| `embedding_lookup_unit` | verified: unit + in-loop 16896/16896 bit-exact; formal PASS; fp_unit protocol migrated with a 4-deep result pipeline (1 element/cycle preserved) |
+| `residual_adder_unit` | verified: unit 6144/6144, in-loop 52224/52224 bit-exact; fp32 datapath with 0.246 built in; formal PASS; fp_unit protocol migrated (latency 8 = MUL 4 + ADD 3 + reg) |
 | `matrix_unit` | verified: in-loop q/k_proj bit-exact; formal PASS; rare (<0.1%) 1-ULP ATen blocked-GEMM order differences documented. Optimized bit-exactly: LANES parallel output rows (8-vector busy cycles 4755 -> 1299 at LANES=4), P2 2-stage pipelined adder + 2 interleaved accumulator contexts, operand-register pipeline, P5 2-stage pipelined multiplier `fp_mul_pipe2` (148 -> 74 ltp levels); flattened ltp 221 -> 137 (~1.54x Fmax proxy, adder-limited) |
-| `SSM_unit` | verified: unit, in-loop max abs 4.5e-8; formal depth 140 PASS; pipelined output lanes (LANES, default 4, 3 MUL + 2 ADD per lane, 1 element/cycle): LANES=1 vs 4 bit-identical 90/90, in-loop identical figures, ~1.19M -> ~70.4k cycles/token (~17x) |
-| `attention_unit` | verified: unit 1536/1536 bit-exact, in-loop bit-exact vs layer-10 eager attention; formal depth 220 PASS; Q/K/V/O at MATRIX_LANES=4: unit 64/64, in-loop max abs 0.0/0 out of 6912, ~0.4M cycles/token (was ~1.6M) |
-| `mlp_unit` (`SwiGLU_unit/`) | verified: unit bit-exact, in-loop bit-exact + 0/3072 outside 2e-2 vs model; formal depth 260 PASS; gate+up/down at MATRIX_LANES=4: unit 64/64, in-loop identical results at ~1.25M cycles/token (was ~4.8M) |
-| `mamba2_unit` | verified: full-config unit 768/768 bit-exact, in-loop 0/3840 outside 2e-2; formal depth 260 PASS; in_proj/out_proj at MATRIX_LANES=4: unit 32/32, in-loop max abs 3.906e-03/0 out of 3840 at ~2.3M cycles/token (was ~5.1M) |
-| `conv1d_unit` | verified: unit 49152/49152 bit-exact, in-loop 13824/13824 bit-exact; formal depth 120 PASS |
-| `RMSNorm_unit` | verified: unit + in-loop PASS after the fp32 datapath fix; its formal files still need `fp32_to_bf16_round.sv` added |
-| `softmax_unit` | verified: in-loop 3888/3888 rows, formal depth 120 PASS; LUT exp is coarse (max rel 0.209) - attention uses `attn_softmax_seq` (accurate) instead |
+| `SSM_unit` | verified: unit, in-loop max abs 4.5e-8; formal depth 140 PASS; pipelined output lanes (LANES, default 4, 3 MUL + 2 ADD per lane): LANES=1 vs 4 bit-identical 90/90; fp_unit protocol migrated with an ADD-latency-bound schedule (3 cycles/element/lane, MAC block 3*D_STATE+12); in-loop identical figures at ~180k cycles/token |
+| `attention_unit` | verified: unit 1536/1536 bit-exact, in-loop bit-exact vs layer-10 eager attention; formal depth 220 PASS; Q/K/V/O at MATRIX_LANES=4; fp_unit protocol migrated (serialized score/softmax/context loops with results latched on out_valid): unit 64/64, in-loop max abs 0.0/0 out of 6912, ~0.49M cycles/token |
+| `mlp_unit` (`SwiGLU_unit/`) | verified: unit bit-exact, in-loop bit-exact + 0/3072 outside 2e-2 vs model; formal depth 260 PASS; gate+up/down at MATRIX_LANES=4; fp_unit protocol migrated (silu ~145 cycles/element): unit 64/64, in-loop identical results at ~1.5M cycles/token |
+| `mamba2_unit` | verified: full-config unit 768/768 bit-exact, in-loop 0/3840 outside 2e-2; formal depth 260 PASS; in_proj/out_proj at MATRIX_LANES=4; fp_unit protocol migrated (silu ~145 cycles/element, SSM MAC block 3*D_STATE+12): unit 32/32, in-loop identical figures (max abs 3.906e-03, 0/3840 outside) at ~1.8M cycles/token |
+| `conv1d_unit` | verified: unit 49152/49152 bit-exact, in-loop 13824/13824 bit-exact; formal depth 120 PASS; fp_unit protocol migrated (~46 cycles/element: 4 MUL + 4 ADD with in_valid/out_valid handshake) |
+| `RMSNorm_unit` | verified: unit + in-loop 41472/41472 bit-exact after the fp32 datapath fix; formal depth 80 PASS; fp_unit protocol migrated (iterative DIV/SQRT contexts held across REQ/WAIT) |
+| `softmax_unit` | verified: in-loop 3888/3888 rows, formal depth 120 PASS; LUT exp is coarse (max rel 0.209) - attention uses `attn_softmax_seq` (accurate) instead; fp_unit protocol migrated (results latched on out_valid, DIV serialized) |
 | `sigmoid_unit`, `SiLU_unit` | verified: formal depth 10 PASS; LUT-based approximations (<0.5% sigmoid error), not used on fp32-critical paths |
-| `output_projection_unit` | verified: unit bit-exact 256/256, in-loop bit-exact 1024/1024 on 512 sampled vocab rows (the 77M-param table cannot be simulated in full), formal depth 60 PASS; LM head at MATRIX_LANES=4: same bit-exact results, projection ~77.4M -> ~19.4M cycles |
+| `output_projection_unit` | verified: unit bit-exact 256/256, in-loop bit-exact 1024/1024 on 512 sampled vocab rows (the 77M-param table cannot be simulated in full), formal depth 60 PASS; LM head at MATRIX_LANES=4: same bit-exact results, projection ~77.4M -> ~19.4M cycles; fp_unit protocol migrated (scale DIV serialized, matrix-dominated) |
 | `granite_layer` | verified: single-token real-weight in-loop PASS (max abs 0.0078); end-to-end hybrid PASS (argmax 220, top-5 [220, 198, 11, 16, 7]); both re-run after the LANES=4 / fp_mul_pipe2 optimizations with identical results |
-| `fp_unit` | spec only - implementation is the external `systemverilog_fp_unit/` git repository, which also provides `fp_add_pipe2` (the 2-stage pipelined fp32 adder used by matrix_unit) |
+| `fp_unit` | spec only - implementation is the external `systemverilog_fp_unit/` git repository (pinned at `86edefc`), which also provides `fp_add_pipe2`/`fp_mul_pipe2` for matrix_unit. fp_unit is now transaction based (1-cycle in_valid, result latched on out_valid: ADD/SUB 3, MUL 4, DIV/SQRT 17, FMA 8, min/max 1 cycles); all outer units are migrated (see `src/fp_unit/description.yaml` migration_note) |
 
 ## Numerics rules (learned the hard way)
 
@@ -62,8 +62,15 @@ Key config constants (must appear exactly in the RTL):
    silently pass tolerance checks.
 5. **Tolerance checks must be NaN-aware**: `abs_err > tol and rel_err > tol`
    plus an explicit non-finite count; Python `max(x, nan)` hides NaN.
-6. Registered `fp_unit` outputs mean operands must be held through wait
-   states, or latch each intermediate in a register.
+6. **`fp_unit` is transaction based since the protocol migration**: assert
+   `in_valid` for exactly one cycle (several back-to-back starts stream through
+   MUL/ADD, one result per start), and latch `y` on the `out_valid` pulse.
+   Datapath outputs are stable on the `out_valid` cycle and ~1 cycle past it,
+   then decay, so never read `y` in a later wait state: latch every product,
+   accumulator and operand into local registers on the pulse (and hold the
+   operands through the first wait cycle when the start pulse is registered).
+   DIV/SQRT are iterative (17 cycles), serialize, and need >= 1 dead cycle
+   after `out_valid`.
 
 ## Simulation feasibility
 
@@ -72,11 +79,11 @@ Measured cost (Verilator, ~3-6k cycles/s wall):
 | Path | Cycles |
 |---|---|
 | weight load | 1 beat/cycle (mamba2 layer ~3.8M, full decoder layer ~8.5M) |
-| SSM per token | ~1.19M |
-| attention per token | ~1.6M |
-| MLP per token | ~4.8M |
-| mamba2 layer per token | ~5.1M |
-| full 32-layer token | ~169M (~8-15 h) + ~350M weight-load beats |
+| SSM per token | ~180k |
+| attention per token | ~490k |
+| MLP per token | ~1.5M |
+| mamba2 layer per token | ~1.8M |
+| full 32-layer token | ~52M (~4-8 h) + ~350M weight-load beats |
 
 A full 32-layer run is therefore **not** simulatable. Use `granite_layer`
 (one layer, one token, real weights) and `tb_granite_layer_e2e.py` (one RTL
@@ -84,10 +91,10 @@ layer + the other 31 layers in software, comparing final logits), which is the
 accepted end-to-end verification. Latest result (after the LANES=4 rollout and
 the pipelined multiplier): same argmax 220 and top-5 [220, 198, 11, 16, 7] as
 the software baseline. Note: the matrix_unit optimizations (LANES=4, pipelined
-adder/multiplier) are now active in every consumer and reduce the ~87.5M
-matrix cycles per token to roughly a quarter; the per-path cycle estimates
-above predate them (measured: attention ~0.4M, MLP ~1.25M, mamba2 ~2.3M
-cycles/token; LM head ~19.4M estimated).
+adder/multiplier) are active in every consumer, and the fp_unit protocol
+migration serialized the remaining sequential loops; the per-path cycle
+figures above are the post-migration measured/derived values (LM head
+~19.4M estimated).
 
 ## Open-Source Toolchain
 
@@ -197,11 +204,12 @@ The Python model is the source of truth. Capture activations with
 
 ## Remaining Work
 
-- **Next task: migrate the outer units to upstream's pipelined `fp_unit`**
-  (new per-op latencies + in_valid handshake; `ITER_DIVSQRT` default 1). Until
-  this is done the outer repo stays pinned at library commit `83f470e` (the
-  `opt/fp-mul-pipe2` tip; `fp_mul_pipe2` merged into library `master` as
-  `11c459c`); see `src/fp_unit/description.yaml` (`migration_note`).
+- The fp_unit protocol migration is **complete** on branch `opt/fp-unit-migration`
+  (submodule pinned at `86edefc`, which contains the `fp_mul_pipe` streaming
+  fix). All outer units were migrated, kept bit-identical where they were
+  bit-exact, and re-verified (unit + in-loop + formal); per-unit evidence is in
+  `src/<unit>/description.yaml`. The library fix still needs to reach the
+  submodule's `master` (see `src/fp_unit/description.yaml`).
 - Attention-type variant of `granite_layer` (GraniteMoeHybridAttention layers
   at indices 10, 13, 17, 27).
 - Wrapper-level formal properties for `granite_layer`.

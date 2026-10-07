@@ -1,4 +1,4 @@
-# status: verified: full-config unit 768/768 bit-exact, in-loop 0/3840 outside 2e-2; formal depth 260 PASS; conv1d fp32 + eps 1e-5 fixes
+# status: verified after fp_unit protocol migration: full-config unit 768/768 bit-exact, in-loop 0/3840 outside 2e-2; formal depth 260 PASS; conv1d fp32 + eps 1e-5 fixes
 #Description
 
 llm_guidance: 
@@ -119,15 +119,17 @@ characteristics:
     Weight load: 3,782,688 cycles at 768/1536 (in_proj 3376x768 + out_proj
     768x1536 + conv 1792x4 + 1792 + 1536 + 3x48 weights), ~25 ms at 150 MHz.
     Per token: in_proj (768 feed + 3376/4 x 780 MAC with MATRIX_LANES = 4) +
-    conv (1792 x 17) + two accurate SiLU passes (1792 + 1536 elements x ~30) +
-    SSM frame (1840 feed + per-head prep/w loop + 48 x 8 x (132 + 4) pipelined
-    lane cycles = ~70k total) + gated norm (~1536 x 12) + out_proj (1536 feed +
-    768/4 x 1548 MAC) -> measured ~1.17M cycles per token in-loop (~7.8 ms at
-    150 MHz; was ~2.3M after the matrix rollout, ~5.1M originally). The conv
-    history (3 previous B_C vectors) and the SSM state persist across tokens.
-  throughput: one token per ~1.17M cycles; the in_proj (~0.66M) now dominates,
-    followed by the out_proj (~0.30M), the SSM recurrence (~0.07M with
-    LANES=4, was ~1.2M) and the conv/silu/norm phases.
+    conv (1792 x ~46 after the fp_unit protocol migration) + two accurate SiLU
+    passes (1792 + 1536 elements x ~145: the polynomial exp plus the iterative
+    divider reciprocal) + SSM frame (1840 feed + per-head prep/w loop + 48 x 8
+    blocks x (3*128 + 12) lane cycles = ~180k total) + gated norm (~1536 x 35
+    with the serialized MUL/ADD/DIV/SQRT steps) + out_proj (1536 feed + 768/4 x
+    1548 MAC) -> ~1.8M cycles per token (~12 ms at 150 MHz; was ~1.17M after
+    the LANES=4 rollout, ~5.1M originally). The conv history (3 previous B_C
+    vectors) and the SSM state persist across tokens.
+  throughput: one token per ~1.8M cycles; the in_proj (~0.66M) still dominates,
+    followed by the two SiLU passes (~0.5M), the out_proj (~0.30M), the SSM
+    recurrence (~0.18M) and the conv/norm phases.
   resource_usage: >
     Sub-unit memories: in_proj weights 3376x768x16-bit (4.15 MB), out_proj
     768x1536x16-bit (1.89 MB), conv weights 1792x4 + bias, SSM state
@@ -151,6 +153,11 @@ characteristics:
     rounding of its output, matching the layer's `.to(dtype)` before out_proj.
     The SSM exponential is a polynomial (~1e-5 relative error), so composite
     comparisons are tolerance-based.
+    fp_unit protocol migration: the gated-norm MUL/ADD/DIV/SQRT steps are
+    started with 1-cycle in_valid pulses and every result is latched on the
+    out_valid pulse; the div/sqrt engines keep their operation context stable
+    across the REQ/WAIT states. The sub-units' interfaces are unchanged, so
+    the frame contract is unaffected.
   unit_verification: >
     tb_mamba2_unit.py: small config (HIDDEN=8, INTER=4, HEADS=2, HEAD_DIM=2,
     D_STATE=2, 4 tokens) - 32/32, max abs/rel error 0.0; full config
@@ -177,15 +184,20 @@ characteristics:
     was ~5.1M). Re-run again with the pipelined SSM lanes (branch opt/ssm-unit,
     LANES=4): again identical figures (max abs 3.906e-03, max rel 7.692e-03,
     0/3840 outside 2e-2, non-finite 0) at ~1.17M cycles/token (~7.8 ms at
-    150 MHz); the in-loop wall time is dominated by the 3.78M-cycle weight
-    load and grows slightly because the lane datapath increases the per-cycle
-    simulation cost. Run: `.venv/bin/python run_test.py inloop`.
+    150 MHz).
+    Re-run after the fp_unit protocol migration: identical figures again
+    (max abs 3.906e-03, max rel 7.692e-03, 0/3840 outside 2e-2, non-finite 0)
+    at ~1.8M cycles/token; the in-loop wall time is still dominated by the
+    3.78M-cycle weight load. Run: `.venv/bin/python run_test.py inloop`.
   formal_verification: >
     formal/bmc.sby: BMC depth 260 (smtbmc boolector) on a HIDDEN=8/INTER=4/
     HEADS=2/HEAD_DIM=2/D_STATE=2 instance with every datapath abstracted by a
     stub with exact handshake timing and constant data (matrix_unit,
-    conv1d_unit, ssm_unit, silu_seq, fp_unit, fp_exp_seq). Proves: tready ==
-    !busy; tvalid only while busy; tlast exactly on the HIDDEN-th output beat;
-    at most HIDDEN output beats per activation; a busy period ends only after
-    all HIDDEN output beats were accepted; no output beats before the first
-    complete input frame. PASSES. Run: `sby -f bmc.sby`.
+    conv1d_unit, ssm_unit, silu_seq; fp_unit datapath outputs constant zero
+    and out_valid pulsing the cycle after in_valid; fp_exp_seq stub). Proves:
+    tready == !busy; tvalid only while busy; tlast exactly on the HIDDEN-th
+    output beat; at most HIDDEN output beats per activation; a busy period ends
+    only after all HIDDEN output beats were accepted; no output beats before
+    the first complete input frame. PASSES (re-run after the protocol
+    migration; the matrix stub gained the LANES parameter introduced by the
+    LANES=4 rollout). Run: `sby -f bmc.sby`.

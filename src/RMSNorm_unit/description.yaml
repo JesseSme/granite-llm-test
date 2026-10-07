@@ -1,4 +1,4 @@
-# status: verified: unit + in-loop PASS after the fp32 datapath fix (was bf16 accumulation, ~10% variance error, eps 7.63e-6); formal files still need fp32_to_bf16_round.sv
+# status: verified after fp_unit protocol migration: unit + in-loop 41472/41472 bit-exact (fp32 datapath), formal depth 80 PASS
 #Description
 
 llm_guidance: 
@@ -71,8 +71,13 @@ interface:
 max_clock_speed: 300 MHz
 
 characteristics:
-  latency: ~4613 cycles per vector (768 elements × 3 cycles/element for ACCUM_SQ + NORMALIZE, plus MEAN_EPS and SQRT overhead)
-  throughput: 1 vector per ~4613 cycles (throughput = WIDTH / 4613 elements/cycle)
+  latency: >
+    ~28k cycles per vector: the ACCUM_SQ phase squares and accumulates each of
+    the 768 elements (~10 cycles/element: MUL 4 + ADD 3 + handshake), then
+    MEAN_EPS (DIV 17) and SQRT (17); the NORMALIZE phase multiplies by the
+    weight, divides by the RMS and rounds to bfloat16 per element (~26
+    cycles/element with the iterative divider).
+  throughput: 1 vector per ~28k cycles (throughput = WIDTH / ~28k elements/cycle)
   resource_usage: >
     Uses 1 fp_unit instance (shared for MUL, ADD, DIV, SQRT operations),
     768 × 16-bit input buffer (12 Kbit BRAM),
@@ -80,19 +85,31 @@ characteristics:
     and small control registers.
   notes: >
     Sequential FSM processing one vector of WIDTH elements at a time.
-    Uses bfloat16 precision at every step (matching PyTorch bfloat16 computation).
+    The statistic (sum of squares, mean, eps, variance, sqrt) is accumulated
+    and processed in fp32 (matching the model's float32 variance), with the
+    bfloat16 inputs widened exactly (high-half placement) and a single
+    bfloat16 rounding at the output; the fp32 accumulator was the fix for the
+    earlier bf16 sum-of-squares error.
     Weight vector is loaded once and reused for all sequence positions.
     5-phase pipeline: BUFFER_INPUT → ACCUM_SQ → MEAN_EPS → SQRT_RMS → NORMALIZE.
+    fp_unit protocol migration: each operation is started with a 1-cycle
+    in_valid pulse and results are latched on the out_valid pulse; the
+    DIV/SQRT engine is iterative (17 cycles) and its operation context is held
+    stable across the request/wait states. `mean_eps_val` is 32-bit (it
+    truncated the SQRT operand when it was 16-bit).
+  unit_verification: >
+    tb_rmsnorm_unit.py: model-derived golden sample, PASS after the fp32
+    datapath fix and the fp_unit protocol migration.
   in_loop_verification: >
     tb_rmsnorm_unit_inloop.py captures real activations from 6 non-gated RMSNorm
     modules (input_layernorm layers 0/1/10/31, layer-0 post_attention_layernorm,
-    final norm) of Granite 4.0-H-350M. 41472/41472 outputs bit-exact vs the RTL
-    bfloat16 emulation. Note the model computes the variance in float32 while the
-    RTL accumulates in bfloat16, so individual outputs deviate up to ~11.5% rel /
-    48 abs vs the PyTorch layer output; the unit reproduces the intended bfloat16
-    algorithm, not the fp32-internal PyTorch result.
+    final norm) of Granite 4.0-H-350M. 41472/41472 outputs bit-exact vs the
+    model (fp32 statistic, one bf16 round) after the fp32 datapath fix and the
+    fp_unit protocol migration. (Before the fix the RTL used a bf16
+    sum-of-squares and deviated up to ~11.5% rel / 48 abs.)
   formal_verification: >
     formal/bmc.sby (SymbiYosys BMC, depth 80, fp_unit abstracted via an anyseq
     stub) proves: no output before the weight vector is fully loaded, output
     only while busy, busy only rises after an accepted input, and exactly WIDTH
-    outputs per accepted vector. Run: sby -f bmc.sby.
+    outputs per accepted vector. Run: sby -f bmc.sby. PASS after the protocol
+    migration (latency-agnostic properties, unchanged by the migration).

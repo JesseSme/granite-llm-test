@@ -4,9 +4,9 @@
 
 - [x] RTL passes Verilator lint with `-Wall` (no warnings).
 - [x] cocotb testbench passes against golden sample for all test vectors.
-- [x] In-loop test passes — 41472/41472 bit-exact vs RTL bf16 emulation on real
-      Granite 4.0-H-350M activations (6 norm modules × 9 rows); max deviation vs
-      PyTorch fp32-variance layer output 11.5% rel (expected bf16 accumulation).
+- [x] In-loop test passes — 41472/41472 bit-exact vs the model on real
+      Granite 4.0-H-350M activations (6 norm modules × 9 rows) after the fp32
+      datapath fix and the fp_unit protocol migration.
 - [x] `description.yaml` is updated with interface, Fmax, and characteristics.
 - [x] No hardcoded magic numbers — use parameters or `define` constants.
 - [x] Follows existing code conventions (see `systemverilog_fp_unit/rtl/`).

@@ -75,8 +75,12 @@ max_clock_speed: 200 MHz (estimated; binary32 fp_unit MUL/ADD logic depth 106 vs
   library available)
 
 characteristics:
-  latency: 3 cycles (fp32 MUL register, fp32 ADD register, output register)
-  throughput: 1 element per cycle (fully pipelined, no stalls)
+  latency: >
+    8 cycles (fp_unit MUL latency 4 + fp_unit ADD latency 3 + 1 output
+    register); the two transactions are started together and their results are
+    consumed at their out_valid pulses.
+  throughput: 1 element per cycle (fully pipelined, no stalls; the MUL and ADD
+    units are separate instances and stream back-to-back starts)
   resource_usage: >
     2 binary32 fp_unit instances (OP_MUL by fp32(0.246), OP_ADD),
     two fp32_to_bf16_round units (RNE on the products/sums), two pipeline registers.
@@ -86,16 +90,25 @@ characteristics:
     reproducing torch's bf16 scalar-arithmetic semantics. Rounding is
     roundTiesToEven with NaN/Inf passthrough and correct Inf on overflow.
     fp32_to_bf16_round.sv is reusable by other units that accumulate in fp32.
+    fp_unit protocol migration: each element issues a 1-cycle in_valid pulse to
+    the MUL and the ADD unit; the MUL result is re-registered on its out_valid
+    and presented to the ADD (which was started in parallel), and the ADD
+    result is rounded on its out_valid. Operation order/operands are unchanged,
+    so outputs are bit-identical.
   unit_verification: >
     tb_residual_adder_unit.py: 8 random model-semantics vector pairs (with an
     idle gap to exercise the valid pipeline), 6144/6144 outputs bit-exact vs
-    torch `residual + branch * 0.246`.
+    torch `residual + branch * 0.246`; re-run after the protocol migration:
+    6144/6144 bit-exact.
   in_loop_verification: >
     tb_residual_adder_unit_inloop.py: real Granite forward passes, captures
     both residual adds of layers 0 (Mamba) and 10 (Attention) for two prompts
     (68 vector pairs). 52224/52224 outputs bit-exact vs the model tensors
-    (100.0%, max abs/rel error 0.0).
+    (100.0%, max abs/rel error 0.0); re-run after the protocol migration:
+    52224/52224 bit-exact.
   formal_verification: >
-    formal/bmc.sby (SymbiYosys BMC, depth 10, fp_units abstracted via anyseq
-    stubs) proves valid_out is exactly valid_in delayed by three clocks for
-    arbitrary inputs. Run: sby -f bmc.sby.
+    formal/bmc.sby (SymbiYosys BMC, depth 16, fp_units abstracted via anyseq
+    stubs) proves valid_out is exactly valid_in delayed by eight clocks for
+    arbitrary inputs (with an 8-cycle reset-history guard so only observed
+    valid pulses are compared). Run: sby -f bmc.sby. PASS after the protocol
+    migration.
