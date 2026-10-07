@@ -1,4 +1,4 @@
-# status: verified: unit bit-exact, in-loop bit-exact + 0/3072 outside 2e-2 vs model; formal depth 260 PASS
+# status: verified after fp_unit protocol migration: unit bit-exact, in-loop bit-exact + 0/3072 outside 2e-2 vs model; formal depth 260 PASS
 #Description
 
 llm_guidance: 
@@ -97,10 +97,12 @@ max_clock_speed: 150 MHz (estimated; identical datapath to swiglu_unit — the
 characteristics:
   latency: >
     Identical to swiglu_unit: weight load 4,718,592 cycles at 768/2048, then
-    ~1.25M cycles per vector with the gate+up/down projections at
-    MATRIX_LANES = 4 (measured ~1.25M in-loop, excluding the load; the
-    projections are ~4x faster than the LANES=1 ~4.8M).
-  throughput: one 768-wide vector per ~1.25M cycles at MATRIX_LANES = 4.
+    ~1.5M cycles per vector with the gate+up/down projections at
+    MATRIX_LANES = 4 (measured ~1.25M in-loop before the fp_unit protocol
+    migration; the accurate silu per element now costs ~140 cycles: polynomial
+    exp ~110 + ADD/DIV/MUL with the iterative divider ~30, over 2048
+    elements, adding ~0.22M). The projections still dominate.
+  throughput: one 768-wide vector per ~1.5M cycles at MATRIX_LANES = 4.
   resource_usage: >
     Pure wrapper (no additional logic); the SwiGLU datapath is 2 matrix_unit
     instances with MATRIX_LANES = 4 (9.4 MB of bf16 weights, 8 pipelined MAC
@@ -124,14 +126,17 @@ characteristics:
     0/3072 outside 1e-3 (bit-exact); DUT vs the model's MLP output: max abs
     7.8e-3, max rel 2.8e-2, 0/3072 outside 2e-2 (differences are ATen's
     blocked-GEMM accumulation order over the 2048-term down projection).
-    Re-run with MATRIX_LANES = 4 (branch opt/lanes-rollout): identical results
-    and 0/3072 outside, in ~38 min (~1.25M cycles/token, was ~4.8M). Run:
-    `.venv/bin/python run_test.py inloop`.
+    Re-run after the fp_unit protocol migration: identical figures
+    (max abs 0.0 vs the emulation, max abs 7.812e-03 vs the model, 0/3072
+    outside, no non-finite). Run: `.venv/bin/python run_test.py inloop`.
   formal_verification: >
     formal/bmc.sby: BMC depth 260 (smtbmc boolector) on a HIDDEN=8/INTER=4
     instance with the FP datapaths abstracted (matrix_unit stub with the exact
-    handshake timing and constant data, constant fp_unit/fp_exp_seq). Proves:
+    handshake timing and constant data; fp_unit datapath outputs constant zero
+    with out_valid pulsing the cycle after in_valid; fp_exp_seq stub). Proves:
     tready == !busy; tvalid only while busy; tlast exactly on the HIDDEN-th
     output beat; at most HIDDEN output beats per activation; a busy period ends
     only after all HIDDEN output beats were accepted; no output beats before
-    the first complete input frame. PASSES. Run: `sby -f bmc.sby`.
+    the first complete input frame. PASSES (re-run after the protocol
+    migration; the matrix stub gained the LANES parameter introduced by the
+    LANES=4 rollout). Run: `sby -f bmc.sby`.

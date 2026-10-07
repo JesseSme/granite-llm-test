@@ -1,4 +1,4 @@
-#Description
+# status: verified after fp_unit protocol migration: unit/in-loop bit-exact (covered by mlp_unit tests)
 
 llm_guidance: 
   overall_guidance: Create an in-depth hardware description on how the SwiGLU
@@ -117,15 +117,17 @@ characteristics:
     Weight load: 2*INTER*HIDDEN + HIDDEN*INTER cycles = 4,718,592 at 768/2048
     (one bf16 weight per cycle, ~31 ms at 150 MHz). Per vector: input frame
     (768) + gate+up feed (768) + gate+up drain (4096) + silu
-    (INTER x ~35 cycles = ~72k) + down feed/drain (2048 + 768) plus the
-    projection MAC time. The projections use MATRIX_LANES = 4: 4096/4 x 780 +
-    768/4 x 1548 -> ~1.1M cycles, so ~1.25M cycles per vector at LANES=4
-    (~8.3 ms at 150 MHz; was ~4.8M at LANES=1).
+    (INTER x ~145 cycles = ~297k after the fp_unit protocol migration: the
+    polynomial exp is sequential and the reciprocal uses the iterative
+    divider) + down feed/drain (2048 + 768) plus the projection MAC time. The
+    projections use MATRIX_LANES = 4: 4096/4 x 780 + 768/4 x 1548 -> ~1.1M
+    cycles, so ~1.5M cycles per vector at LANES=4 (~10 ms at 150 MHz; was
+    ~1.25M before the migration, ~4.8M at LANES=1).
   throughput: >
-    One 768-wide vector per ~1.25M cycles at MATRIX_LANES = 4; the fused
+    One 768-wide vector per ~1.5M cycles at MATRIX_LANES = 4; the fused
     gate+up projection (4096 outputs over 768 inputs) still dominates, followed
     by the down projection (768 outputs over 2048 inputs). The silu is a
-    sequential per-element pipeline (~35 cycles/element, ~72k cycles for
+    sequential per-element pipeline (~145 cycles/element, ~297k cycles for
     INTER=2048) and is not the bottleneck.
   resource_usage: >
     Two matrix_unit instances with MATRIX_LANES = 4 (weights 2*INTER*HIDDEN +
@@ -141,10 +143,12 @@ characteristics:
     exponential) rather than the LUT-based silu_unit: the LUT sigmoid
     (<0.5% error, 1/32 input grid) compounds through the down projection to up
     to ~8% relative output error, while the accurate path matches torch's bf16
-    F.silu to within a rounding step (measured bit-exact in-loop). fp_unit
-    operands are latched into registers between pipeline stages because
-    fp_unit has registered outputs (holding combinational operands across wait
-    states silently clobbers the result).
+    F.silu to within a rounding step (measured bit-exact in-loop).
+    fp_unit protocol migration: the ADD/DIV/MUL steps are started with 1-cycle
+    in_valid pulses and each result is latched on the out_valid pulse (the
+    datapath outputs hold only ~1 cycle past out_valid); operands are held
+    through the go cycle. The operation order (1+exp, reciprocal, gate*sig,
+    act*up) is unchanged, so the per-element result is bit-identical.
   unit_verification: >
     Covered by mlp_unit's tests (mlp_unit is a pass-through wrapper):
     tb_mlp_unit.py 64/64 bit-exact vs the fp32 golden (HIDDEN=16, INTER=8,

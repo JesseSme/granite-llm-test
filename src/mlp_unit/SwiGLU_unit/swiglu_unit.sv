@@ -119,7 +119,7 @@ module swiglu_unit #(
     .mode(fp_pkg::OP_ADD), .rm(fp_pkg::RM_RNE),
     .a(add_a), .b(add_b), .c('0),
     .y(add_y), .cmp(/*unused*/), .flags(/*unused*/),
-    .in_valid(1'b1), .out_valid(unused_out_valid_add)
+    .in_valid(go_add), .out_valid(add_ov)
   );
 
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_div (
@@ -127,7 +127,7 @@ module swiglu_unit #(
     .mode(fp_pkg::OP_DIV), .rm(fp_pkg::RM_RNE),
     .a(div_a), .b(div_b), .c('0),
     .y(div_y), .cmp(/*unused*/), .flags(/*unused*/),
-    .in_valid(1'b1), .out_valid(unused_out_valid_div)
+    .in_valid(go_div), .out_valid(div_ov)
   );
 
   fp_unit #(.W_EXP(8), .W_MANT(23)) u_mul (
@@ -135,12 +135,11 @@ module swiglu_unit #(
     .mode(fp_pkg::OP_MUL), .rm(fp_pkg::RM_RNE),
     .a(mul_a), .b(mul_b), .c('0),
     .y(mul_y), .cmp(/*unused*/), .flags(/*unused*/),
-    .in_valid(1'b1), .out_valid(unused_out_valid_mul)
+    .in_valid(go_mul), .out_valid(mul_ov)
   );
 
-  /* verilator lint_off UNUSEDSIGNAL */
-  logic unused_out_valid_add, unused_out_valid_div, unused_out_valid_mul;
-  /* verilator lint_on UNUSEDSIGNAL */
+  logic go_add, go_div, go_mul;        // 1-cycle in_valid pulses
+  logic add_ov, div_ov, mul_ov;        // fp_unit out_valid
 
   logic [31:0] add_a, add_b, add_y;
   logic [31:0] div_a, div_b, div_y;
@@ -212,11 +211,13 @@ module swiglu_unit #(
     div_a = '0; div_b = '0;
     mul_a = '0; mul_b = '0;
 
+    // Operands are held through the first WAIT cycle (the go pulse is
+    // registered); in_valid (go_*) is only asserted in the REQ state.
     case (state)
-      G_ADD:  begin add_a = C_ONE; add_b = exp_y;  end
-      G_DIV:  begin div_a = C_ONE; div_b = e_reg;  end
-      G_SILU: begin mul_a = gate_w;   mul_b = sig_reg; end
-      G_GATE: begin mul_a = {act_reg, 16'b0}; mul_b = up_w; end
+      G_ADD,  G_ADD_W:  begin add_a = C_ONE; add_b = exp_y;  end
+      G_DIV,  G_DIV_W:  begin div_a = C_ONE; div_b = e_reg;  end
+      G_SILU, G_SILU_W: begin mul_a = gate_w;   mul_b = sig_reg; end
+      G_GATE, G_GATE_W: begin mul_a = {act_reg, 16'b0}; mul_b = up_w; end
       default: ;
     endcase
   end
@@ -233,6 +234,9 @@ module swiglu_unit #(
       sig_reg <= '0;
       act_reg <= '0;
       gated_reg <= '0;
+      go_add <= 1'b0;
+      go_div <= 1'b0;
+      go_mul <= 1'b0;
     end else begin
       case (state)
         // ---------------------------------------------------- input frame
@@ -276,14 +280,26 @@ module swiglu_unit #(
         // ---------------------------------------------------- accurate silu
         G_EXP:   state <= G_EXP_W;
         G_EXP_W: if (exp_done) state <= G_ADD;
-        G_ADD:   state <= G_ADD_W;
-        G_ADD_W: begin e_reg   <= add_y; state <= G_DIV; end
-        G_DIV:   state <= G_DIV_W;
-        G_DIV_W: begin sig_reg <= div_y; state <= G_SILU; end
-        G_SILU:  state <= G_SILU_W;
-        G_SILU_W: begin act_reg <= act_bf; state <= G_GATE; end
-        G_GATE:  state <= G_GATE_W;
-        G_GATE_W: begin gated_reg <= gated_bf; state <= G_STORE; end
+        G_ADD:   begin go_add <= 1'b1; state <= G_ADD_W; end
+        G_ADD_W: begin
+          if (go_add) go_add <= 1'b0;
+          else if (add_ov) begin e_reg <= add_y; state <= G_DIV; end
+        end
+        G_DIV:   begin go_div <= 1'b1; state <= G_DIV_W; end
+        G_DIV_W: begin
+          if (go_div) go_div <= 1'b0;
+          else if (div_ov) begin sig_reg <= div_y; state <= G_SILU; end
+        end
+        G_SILU:  begin go_mul <= 1'b1; state <= G_SILU_W; end
+        G_SILU_W: begin
+          if (go_mul) go_mul <= 1'b0;
+          else if (mul_ov) begin act_reg <= act_bf; state <= G_GATE; end
+        end
+        G_GATE:  begin go_mul <= 1'b1; state <= G_GATE_W; end
+        G_GATE_W: begin
+          if (go_mul) go_mul <= 1'b0;
+          else if (mul_ov) begin gated_reg <= gated_bf; state <= G_STORE; end
+        end
 
         G_STORE: begin
           if (i_cnt == I_W'(INTER - 1)) begin
