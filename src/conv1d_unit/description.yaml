@@ -85,8 +85,11 @@ max_clock_speed: 300 MHz (estimated; datapath is one shared fp_unit op per cycle
   same bound as RMSNorm_unit, which shares the fp_unit critical path)
 
 characteristics:
-  latency: 17 clock cycles per output element (1 S_IDLE + 8 FPU ops × 2 cycles + 1 S_OUTPUT)
-  throughput: 1 element per 17 cycles when continuously fed
+  latency: >
+    ~46 clock cycles per output element (8 fp_unit operations: 4 MUL at 6 cycles
+    each and 4 ADD at 5 cycles each, including the 1-cycle in_valid pulse and the
+    out_valid wait; see the fp_unit protocol migration note).
+  throughput: 1 element per ~46 cycles when continuously fed
   architecture: >
     Sequential FSM with a single shared fp32 fp_unit (W_EXP=8, W_MANT=23).
     The bfloat16 operands are widened to fp32 exactly (high-half placement),
@@ -96,9 +99,12 @@ characteristics:
     bit-exact against the Python reference.
     Computes 4-tap FIR per channel:
     w0*x[t] + w1*x[t-1] + w2*x[t-2] + w3*x[t-3] + bias. Circular buffer
-    of 3×1536 elements stores previous timesteps. Each FPU operation takes
-    2 cycles (present inputs + read result) due to the fp_unit's registered
-    output and non-blocking assignment semantics.
+    of 3×1536 elements stores previous timesteps.
+    fp_unit protocol migration: each operation is started with a 1-cycle
+    in_valid pulse and the result is latched on out_valid (MUL latency 4,
+    ADD latency 3); the operand registers are held through the first wait
+    cycle. The operation order and operands are unchanged, so results are
+    bit-identical to the pre-migration unit.
   channels: 1536 (depthwise — each channel independent)
   kernel_size: 4
   padding: 3 (left/causal)
@@ -115,9 +121,9 @@ characteristics:
     pre-SiLU) from the captured projected states. The model's Conv1d module is not
     invoked on CPU (functional fallback), so a module hook would never fire. The
     1536 state-branch channels are driven through the DUT: 13824/13824 outputs
-    within 0.1 abs, max abs error 0.03125.
+    bit-exact (max abs error 0.0), re-run after the fp_unit protocol migration.
   formal_verification: >
     formal/bmc.sby (SymbiYosys BMC, depth 120, fp_unit abstracted via an anyseq
     stub) proves: an output requires at least one accepted input, never more
     outputs than inputs, and at most one input outstanding at a time.
-    Run: sby -f bmc.sby.
+    Run: sby -f bmc.sby. PASS after the fp_unit protocol migration.

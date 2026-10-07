@@ -9,18 +9,20 @@
 //               + weight[c,2]*input[c,t-2] + weight[c,3]*input[c,t-3] + bias[c]
 //
 // Streaming architecture: each valid_in brings one element for one channel.
-// The unit computes using a single shared FPU.
-// ready_o goes low during computation; backpressure-aware upstream must
-// wait for ready before presenting the next element.
+// The unit computes using a single shared fp_unit. ready_o goes low during
+// computation; backpressure-aware upstream must wait for ready before
+// presenting the next element.
 //
 // Weight/bias loaded via load interface before processing starts.
 // Circular buffer (3 x CHANNELS) stores previous timesteps.
 //
-// FPU timing: the fp_unit has a 1-stage registered output.
-// Inputs presented at posedge N produce a result at posedge N+1.
-// Due to non-blocking assignment semantics within a single always_ff block,
-// we cannot read fpu_y in the same cycle we present new inputs. The FSM
-// uses explicit WAIT states to ensure fpu_y is stable before reading.
+// fp_unit protocol: each operation is started by a 1-cycle in_valid pulse and
+// its result is latched on out_valid (MUL 4, ADD 3 cycles). The FSM steps
+// through the per-element chain: MUL0, MUL1, ADD01, MUL2, ADD012, MUL3,
+// ADD_BIAS, ADD_OUT; each step latches the operand registers, pulses `go`
+// (in_valid) for one cycle, then waits for out_valid before the next step.
+// The accumulation order and operands are unchanged (fp32 accumulation, one
+// final bf16 rounding), so results are bit-identical.
 
 /* verilator lint_off WIDTHEXPAND */
 /* verilator lint_off WIDTHTRUNC */
@@ -104,16 +106,16 @@ module conv1d_unit #(
   fp_pkg::rounding_t fpu_rm;
   logic [W_FP32-1:0] fpu_a, fpu_b, fpu_c;
   logic [W_FP32-1:0] fpu_y;
+  logic              fpu_start, fpu_out_valid;
   /* verilator lint_off UNUSEDSIGNAL */
   logic [1:0]  fpu_cmp;
   logic [4:0]  fpu_flags;
-  logic        unused_out_valid_fpu;
   /* verilator lint_on UNUSEDSIGNAL */
 
   fp_unit #(.W_EXP(W_EXP), .W_MANT(W_MANT32)) u_fpu (
     .clk      (clk),
     .rst_n    (rst_n),
-    .in_valid (1'b1),
+    .in_valid (fpu_start),
     .mode     (fpu_mode),
     .rm       (fpu_rm),
     .a        (fpu_a),
@@ -122,13 +124,14 @@ module conv1d_unit #(
     .y        (fpu_y),
     .cmp      (fpu_cmp),
     .flags    (fpu_flags),
-    .out_valid(unused_out_valid_fpu)
+    .out_valid(fpu_out_valid)
   );
 
   // ----------------------------------------------------------------
   // Pipeline registers
   // ----------------------------------------------------------------
   logic [W_FP32-1:0] acc;
+  logic              go;   // in_valid pulse for the current step
 
   function automatic logic [W_FP32-1:0] bf16_to_fp32(input logic [W_FP-1:0] v);
     bf16_to_fp32 = {v, {(W_FP32 - W_FP){1'b0}}};
@@ -155,48 +158,21 @@ module conv1d_unit #(
   // ----------------------------------------------------------------
   // FSM
   //
-  // FPU timing: inputs presented at posedge N → result at posedge N+1.
-  // Due to non-blocking assignments, we CANNOT read fpu_y in the same
-  // cycle we present new inputs. Each state that presents FPU inputs
-  // is followed by a WAIT state where the result becomes available.
-  //
-  // Sequence per element (16 cycles):
-  //   S_IDLE      : present MUL(weight[0], input)
-  //   S_WAIT_MUL0 : (FPU computes)
-  //   S_MUL0      : read MUL0 result → acc. present MUL(weight[1], buf[0])
-  //   S_WAIT_MUL1 : (FPU computes)
-  //   S_MUL1      : read MUL1 result. present ADD(acc, product1)
-  //   S_WAIT_ADD01: (FPU computes)
-  //   S_ADD01     : read ADD result → acc. present MUL(weight[2], buf[1])
-  //   S_WAIT_MUL2 : (FPU computes)
-  //   S_MUL2      : read MUL2 result. present ADD(acc, product2)
-  //   S_WAIT_ADD012:(FPU computes)
-  //   S_ADD012    : read ADD result → acc. present MUL(weight[3], buf[2])
-  //   S_WAIT_MUL3 : (FPU computes)
-  //   S_MUL3      : read MUL3 result. present ADD(acc, product3)
-  //   S_WAIT_BIAS : (FPU computes)
-  //   S_ADD_BIAS  : read ADD result → acc. present ADD(acc, bias)
-  //   S_WAIT_OUT  : (FPU computes)
-  //   S_OUTPUT    : read ADD result. output data. advance buffer.
+  // Sequence per element: MUL0, MUL1, ADD01, MUL2, ADD012, MUL3, ADD_BIAS,
+  // ADD_OUT. Each step: latch the operand registers, pulse `go` for one cycle
+  // (in_valid), then wait for out_valid (fp_mul_pipe/fp_add_pipe accept a new
+  // start every cycle, but this unit issues one operation at a time).
   // ----------------------------------------------------------------
-  typedef enum logic [4:0] {
+  typedef enum logic [3:0] {
     S_IDLE,
     S_WAIT_MUL0,
-    S_MUL0,
     S_WAIT_MUL1,
-    S_MUL1,
     S_WAIT_ADD01,
-    S_ADD01,
     S_WAIT_MUL2,
-    S_MUL2,
     S_WAIT_ADD012,
-    S_ADD012,
     S_WAIT_MUL3,
-    S_MUL3,
     S_WAIT_BIAS,
-    S_ADD_BIAS,
-    S_WAIT_OUT,
-    S_OUTPUT
+    S_WAIT_OUT
   } state_t;
 
   state_t state;
@@ -204,7 +180,8 @@ module conv1d_unit #(
   // ----------------------------------------------------------------
   // Ready: can accept input only when idle
   // ----------------------------------------------------------------
-  assign ready_o = (state == S_IDLE);
+  assign ready_o   = (state == S_IDLE);
+  assign fpu_start = go;
 
   // ----------------------------------------------------------------
   // Sequential: main FSM
@@ -224,6 +201,7 @@ module conv1d_unit #(
       fpu_a       <= '0;
       fpu_b       <= '0;
       fpu_c       <= '0;
+      go          <= 1'b0;
     end else begin
       valid_o <= 1'b0;
 
@@ -233,142 +211,155 @@ module conv1d_unit #(
           if (valid_i) begin
             cur_input   <= data_i;
             cur_channel <= ch_cnt;
-            // Present MUL(weight[c,0], data_i)
+            // Start MUL(weight[c,0], data_i)
             fpu_mode <= fp_pkg::OP_MUL;
             fpu_a    <= bf16_to_fp32(weight_mem[ch_cnt][0]);
             fpu_b    <= bf16_to_fp32(data_i);
             fpu_c    <= '0;
+            go       <= 1'b1;
             state    <= S_WAIT_MUL0;
           end
         end
 
         // ----------------------------------------------------------
-        // WAIT states: FPU is computing, result not yet available
+        // MUL0 result -> acc; start MUL(weight[c,1], buf[c][0])  (t-1)
         // ----------------------------------------------------------
-        S_WAIT_MUL0: state <= S_MUL0;
-        S_WAIT_MUL1: state <= S_MUL1;
-        S_WAIT_ADD01: state <= S_ADD01;
-        S_WAIT_MUL2: state <= S_MUL2;
-        S_WAIT_ADD012: state <= S_ADD012;
-        S_WAIT_MUL3: state <= S_MUL3;
-        S_WAIT_BIAS: state <= S_ADD_BIAS;
-        S_WAIT_OUT:  state <= S_OUTPUT;
-
-        // ----------------------------------------------------------
-        // MUL0: fpu_y = weight[c,0] * data_i (from S_IDLE)
-        // Read result, present MUL1 inputs
-        // ----------------------------------------------------------
-        S_MUL0: begin
-          acc <= fpu_y;
-          // Present MUL(weight[c,1], buf[c][0])  — t-1
-          fpu_mode <= fp_pkg::OP_MUL;
-          fpu_a    <= bf16_to_fp32(weight_mem[cur_channel][1]);
-          fpu_b    <= bf16_to_fp32(buf_rd[0]);
-          fpu_c    <= '0;
-          state    <= S_WAIT_MUL1;
-        end
-
-        // ----------------------------------------------------------
-        // MUL1: fpu_y = weight[c,1] * buf[c][0]
-        // Read result, present ADD01 inputs
-        // ----------------------------------------------------------
-        S_MUL1: begin
-          // Present ADD(acc, product1)
-          fpu_mode <= fp_pkg::OP_ADD;
-          fpu_a    <= acc;
-          fpu_b    <= fpu_y;
-          fpu_c    <= '0;
-          state    <= S_WAIT_ADD01;
-        end
-
-        // ----------------------------------------------------------
-        // ADD01: fpu_y = acc + product1
-        // Read result, present MUL2 inputs
-        // ----------------------------------------------------------
-        S_ADD01: begin
-          acc <= fpu_y;
-          // Present MUL(weight[c,2], buf[c][1])  — t-2
-          fpu_mode <= fp_pkg::OP_MUL;
-          fpu_a    <= bf16_to_fp32(weight_mem[cur_channel][2]);
-          fpu_b    <= bf16_to_fp32(buf_rd[1]);
-          fpu_c    <= '0;
-          state    <= S_WAIT_MUL2;
-        end
-
-        // ----------------------------------------------------------
-        // MUL2: fpu_y = weight[c,2] * buf[c][1]
-        // Read result, present ADD012 inputs
-        // ----------------------------------------------------------
-        S_MUL2: begin
-          // Present ADD(acc, product2)
-          fpu_mode <= fp_pkg::OP_ADD;
-          fpu_a    <= acc;
-          fpu_b    <= fpu_y;
-          fpu_c    <= '0;
-          state    <= S_WAIT_ADD012;
-        end
-
-        // ----------------------------------------------------------
-        // ADD012: fpu_y = sum(0,1) + product2
-        // Read result, present MUL3 inputs
-        // ----------------------------------------------------------
-        S_ADD012: begin
-          acc <= fpu_y;
-          // Present MUL(weight[c,3], buf[c][2])  — t-3
-          fpu_mode <= fp_pkg::OP_MUL;
-          fpu_a    <= bf16_to_fp32(weight_mem[cur_channel][3]);
-          fpu_b    <= bf16_to_fp32(buf_rd[2]);
-          fpu_c    <= '0;
-          state    <= S_WAIT_MUL3;
-        end
-
-        // ----------------------------------------------------------
-        // MUL3: fpu_y = weight[c,3] * buf[c][2]
-        // Read result, present ADD_BIAS inputs
-        // ----------------------------------------------------------
-        S_MUL3: begin
-          // Present ADD(acc, product3)
-          fpu_mode <= fp_pkg::OP_ADD;
-          fpu_a    <= acc;
-          fpu_b    <= fpu_y;
-          fpu_c    <= '0;
-          state    <= S_WAIT_BIAS;
-        end
-
-        // ----------------------------------------------------------
-        // ADD_BIAS: fpu_y = sum_of_products
-        // Read result, present ADD(acc, bias) inputs
-        // Store current input into history buffer
-        // ----------------------------------------------------------
-        S_ADD_BIAS: begin
-          acc <= fpu_y;
-          // Store current input into history buffer
-          buf_mem[buf_wr_ptr][cur_channel] <= cur_input;
-          // Present ADD(sum_of_products, bias)
-          fpu_mode <= fp_pkg::OP_ADD;
-          fpu_a    <= fpu_y;
-          fpu_b    <= bf16_to_fp32(bias_mem[cur_channel]);
-          fpu_c    <= '0;
-          state    <= S_WAIT_OUT;
-        end
-
-        // ----------------------------------------------------------
-        // OUTPUT: fpu_y = final result (sum + bias)
-        // ----------------------------------------------------------
-        S_OUTPUT: begin
-          data_o  <= out_bf16;
-          valid_o <= 1'b1;
-
-          // Advance channel counter
-          if (ch_cnt == CHANNELS - 1) begin
-            ch_cnt     <= '0;
-            buf_wr_ptr <= (buf_wr_ptr == BUF_DEPTH - 1)
-                          ? '0 : buf_wr_ptr + 1'b1;
-          end else begin
-            ch_cnt <= ch_cnt + 1'b1;
+        S_WAIT_MUL0: begin
+          if (go) begin
+            go <= 1'b0;
+          end else if (fpu_out_valid) begin
+            acc      <= fpu_y;
+            fpu_mode <= fp_pkg::OP_MUL;
+            fpu_a    <= bf16_to_fp32(weight_mem[cur_channel][1]);
+            fpu_b    <= bf16_to_fp32(buf_rd[0]);
+            fpu_c    <= '0;
+            go       <= 1'b1;
+            state    <= S_WAIT_MUL1;
           end
+        end
 
-          state <= S_IDLE;
+        // ----------------------------------------------------------
+        // Start ADD(acc, product1)
+        // ----------------------------------------------------------
+        S_WAIT_MUL1: begin
+          if (go) begin
+            go <= 1'b0;
+          end else if (fpu_out_valid) begin
+            fpu_mode <= fp_pkg::OP_ADD;
+            fpu_a    <= acc;
+            fpu_b    <= fpu_y;
+            fpu_c    <= '0;
+            go       <= 1'b1;
+            state    <= S_WAIT_ADD01;
+          end
+        end
+
+        // ----------------------------------------------------------
+        // ADD01 result -> acc; start MUL(weight[c,2], buf[c][1])  (t-2)
+        // ----------------------------------------------------------
+        S_WAIT_ADD01: begin
+          if (go) begin
+            go <= 1'b0;
+          end else if (fpu_out_valid) begin
+            acc      <= fpu_y;
+            fpu_mode <= fp_pkg::OP_MUL;
+            fpu_a    <= bf16_to_fp32(weight_mem[cur_channel][2]);
+            fpu_b    <= bf16_to_fp32(buf_rd[1]);
+            fpu_c    <= '0;
+            go       <= 1'b1;
+            state    <= S_WAIT_MUL2;
+          end
+        end
+
+        // ----------------------------------------------------------
+        // Start ADD(acc, product2)
+        // ----------------------------------------------------------
+        S_WAIT_MUL2: begin
+          if (go) begin
+            go <= 1'b0;
+          end else if (fpu_out_valid) begin
+            fpu_mode <= fp_pkg::OP_ADD;
+            fpu_a    <= acc;
+            fpu_b    <= fpu_y;
+            fpu_c    <= '0;
+            go       <= 1'b1;
+            state    <= S_WAIT_ADD012;
+          end
+        end
+
+        // ----------------------------------------------------------
+        // ADD012 result -> acc; start MUL(weight[c,3], buf[c][2])  (t-3)
+        // ----------------------------------------------------------
+        S_WAIT_ADD012: begin
+          if (go) begin
+            go <= 1'b0;
+          end else if (fpu_out_valid) begin
+            acc      <= fpu_y;
+            fpu_mode <= fp_pkg::OP_MUL;
+            fpu_a    <= bf16_to_fp32(weight_mem[cur_channel][3]);
+            fpu_b    <= bf16_to_fp32(buf_rd[2]);
+            fpu_c    <= '0;
+            go       <= 1'b1;
+            state    <= S_WAIT_MUL3;
+          end
+        end
+
+        // ----------------------------------------------------------
+        // Start ADD(acc, product3); store the current input in the history
+        // ----------------------------------------------------------
+        S_WAIT_MUL3: begin
+          if (go) begin
+            go <= 1'b0;
+          end else if (fpu_out_valid) begin
+            fpu_mode <= fp_pkg::OP_ADD;
+            fpu_a    <= acc;
+            fpu_b    <= fpu_y;
+            fpu_c    <= '0;
+            go       <= 1'b1;
+            state    <= S_WAIT_BIAS;
+          end
+        end
+
+        // ----------------------------------------------------------
+        // sum_of_products -> acc; start ADD(sum_of_products, bias)
+        // ----------------------------------------------------------
+        S_WAIT_BIAS: begin
+          if (go) begin
+            go <= 1'b0;
+          end else if (fpu_out_valid) begin
+            acc <= fpu_y;
+            // Store current input into history buffer
+            buf_mem[buf_wr_ptr][cur_channel] <= cur_input;
+            fpu_mode <= fp_pkg::OP_ADD;
+            fpu_a    <= fpu_y;
+            fpu_b    <= bf16_to_fp32(bias_mem[cur_channel]);
+            fpu_c    <= '0;
+            go       <= 1'b1;
+            state    <= S_WAIT_OUT;
+          end
+        end
+
+        // ----------------------------------------------------------
+        // Final result (sum + bias): output and advance
+        // ----------------------------------------------------------
+        S_WAIT_OUT: begin
+          if (go) begin
+            go <= 1'b0;
+          end else if (fpu_out_valid) begin
+            data_o  <= out_bf16;
+            valid_o <= 1'b1;
+
+            // Advance channel counter
+            if (ch_cnt == CHANNELS - 1) begin
+              ch_cnt     <= '0;
+              buf_wr_ptr <= (buf_wr_ptr == BUF_DEPTH - 1)
+                            ? '0 : buf_wr_ptr + 1'b1;
+            end else begin
+              ch_cnt <= ch_cnt + 1'b1;
+            end
+
+            state <= S_IDLE;
+          end
         end
 
         default: state <= S_IDLE;
