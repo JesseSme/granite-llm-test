@@ -91,20 +91,22 @@ module output_projection_unit #(
   // ----------------------------------------------------------------
   logic              sc_valid;      // divide in flight
   logic              sc_out_valid;  // result ready, held for downstream
+  logic              sc_go;         // 1-cycle in_valid pulse to the divider
+  logic              div_ov;        // fp_unit out_valid
   logic [W_DATA-1:0] sc_tdata;
   logic              sc_tlast;
+  logic [W_FP32-1:0] sc_data;   // latched operand (the matrix advances)
   logic [W_FP32-1:0] div_a, div_y;
   logic [W_DATA-1:0] div_bf;
   /* verilator lint_off UNUSEDSIGNAL */
   logic [1:0]        div_cmp;
   logic [4:0]        div_flags;
-  logic              unused_out_valid_div;
   /* verilator lint_on UNUSEDSIGNAL */
 
   fp_unit #(.W_EXP(8), .W_MANT(W_MANT32)) u_div (
     .clk      (clk),
     .rst_n    (rst_n),
-    .in_valid (1'b1),
+    .in_valid (sc_go),
     .mode     (fp_pkg::OP_DIV),
     .rm       (fp_pkg::RM_RNE),
     .a        (div_a),
@@ -113,7 +115,7 @@ module output_projection_unit #(
     .y        (div_y),
     .cmp      (div_cmp),
     .flags    (div_flags),
-    .out_valid(unused_out_valid_div)
+    .out_valid(div_ov)
   );
 
   fp32_to_bf16_round u_round (.x(div_y), .y(div_bf));
@@ -122,27 +124,37 @@ module output_projection_unit #(
     bf16_to_fp32 = {v, {(W_FP32 - W_DATA){1'b0}}};
   endfunction
 
-  assign div_a         = bf16_to_fp32(proj_m_tdata);
+  assign div_a         = sc_data;
   assign proj_m_tready = !sc_valid && !sc_out_valid;
 
+  // The iterative divider is transaction-based (one at a time, out_valid
+  // after ~17 cycles), so the scale stage accepts one beat, pulses sc_go for
+  // one cycle and waits for div_ov; the matrix output is backpressured in the
+  // meantime. The divide itself (and its single bf16 rounding) is unchanged.
   always_ff @(posedge clk) begin
     if (!rst_n) begin
       sc_valid     <= 1'b0;
       sc_out_valid <= 1'b0;
+      sc_go        <= 1'b0;
+      sc_data      <= '0;
       sc_tdata     <= '0;
       sc_tlast     <= 1'b0;
     end else begin
+      if (sc_go)
+        sc_go <= 1'b0;
+
       if (proj_m_tvalid && proj_m_tready) begin
         sc_valid <= 1'b1;
+        sc_go    <= 1'b1;
+        sc_data  <= bf16_to_fp32(proj_m_tdata);
         sc_tlast <= proj_m_tlast;
-      end else begin
-        sc_valid <= 1'b0;
       end
 
-      if (sc_valid) begin
+      if (div_ov) begin
+        sc_valid     <= 1'b0;
         sc_out_valid <= 1'b1;
         sc_tdata     <= div_bf;
-      end else if (m_axis_tready) begin
+      end else if (sc_out_valid && m_axis_tready) begin
         sc_out_valid <= 1'b0;
       end
     end

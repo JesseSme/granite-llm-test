@@ -47,6 +47,13 @@ characteristics:
     (OP_DIV, W_MANT=23), and rounded to bfloat16 once with fp32_to_bf16_round.
     The scale stage holds one result under downstream backpressure and only
     accepts the next projected beat when free.
+    fp_unit protocol migration: the divider is transaction based (1-cycle
+    in_valid pulse, result latched on out_valid, DIV latency 17), so the scale
+    stage accepts a projected beat, pulses the divider and backpressures the
+    matrix until the result is ready (~19 cycles per beat instead of 1).
+    Projection time is matrix-dominated (~19.4M vs ~1.9M scale cycles), so the
+    LM-head total is essentially unchanged. The divide and rounding are
+    unchanged, so results stay bit-exact.
   scaling: "logits / 3 (config.logits_scaling), fp32 division then one bf16 round"
   bias: none (tied LM head, mamba_proj_bias/attention_bias are false)
   vocab: 100352 (parameterized; tests use a reduced or sampled vocabulary

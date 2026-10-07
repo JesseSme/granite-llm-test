@@ -4,6 +4,9 @@ module matrix_unit #(
   parameter int IN_FEATURES = 768,
   parameter int OUT_FEATURES = 768,
   parameter int W_DATA = 16,
+  // LANES only changes the internal row-parallel schedule of the real unit;
+  // the external handshake modelled here is lane-count independent.
+  parameter int LANES = 1,
   parameter int IN_W = $clog2(IN_FEATURES),
   parameter int OUT_W = $clog2(OUT_FEATURES)
 ) (
